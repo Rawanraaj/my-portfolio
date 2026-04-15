@@ -9,7 +9,7 @@ const projects = [
     technologies: ['HTML', 'CSS', 'JavaScript'],
     status: 'ongoing',
     link: '#',
-    image: null,
+    image: "/kfxstudio.png",
   },
   {
     title: 'Personal Portfolio',
@@ -19,7 +19,7 @@ const projects = [
     technologies: ['React', 'CSS 3D', 'Vite'],
     status: 'live',
     link: '#',
-    image: null,
+    image: "/Portfolio.png",
   },
   {
     title: 'Khalipana News Portal',
@@ -29,7 +29,7 @@ const projects = [
     technologies: ['CMS', 'Design', 'Social Media'],
     status: 'live',
     link: 'https://khalipana.com/',
-    image: null,
+    image: "/Khalipana.png",
   },
 ]
 

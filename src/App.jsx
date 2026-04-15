@@ -35,8 +35,9 @@ function ParticleConstellation() {
       initParticles()
     }
 
-    const PARTICLE_COUNT = Math.min(Math.floor((width * height) / 12000), 120)
-    const CONNECTION_DIST = 150
+    const isMobile = 'ontouchstart' in window || window.innerWidth < 768
+    const PARTICLE_COUNT = isMobile ? Math.min(Math.floor((width * height) / 25000), 40) : Math.min(Math.floor((width * height) / 12000), 120)
+    const CONNECTION_DIST = isMobile ? 100 : 150
     const MOUSE_RADIUS = 200
     const MOUSE_PUSH = 0.8
 
@@ -50,7 +51,7 @@ function ParticleConstellation() {
 
     function initParticles() {
       particlesRef.current = []
-      const count = Math.min(Math.floor((width * height) / 12000), 120)
+      const count = isMobile ? Math.min(Math.floor((width * height) / 25000), 40) : Math.min(Math.floor((width * height) / 12000), 120)
       for (let i = 0; i < count; i++) {
         particlesRef.current.push({
           x: Math.random() * width,
@@ -375,7 +376,8 @@ function App() {
 
   return (
     <>
-      <CustomCursor />
+      {/* Custom cursor — desktop only */}
+      {typeof window !== 'undefined' && !('ontouchstart' in window) && <CustomCursor />}
 
       {/* Layer 1: Animated Aurora Gradients */}
       <AuroraBackground />
