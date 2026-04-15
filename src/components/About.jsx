@@ -66,7 +66,7 @@ export default function About() {
         <div className="section-header reveal">
           <span className="section-eyebrow">About Me</span>
           <h2 className="section-title">
-            Designing the <span className="gradient-text">Future</span>, One Pixel at a Time
+            Just a <span className="gradient-text">Student</span>, Trying to pursue dreams.
           </h2>
         </div>
 

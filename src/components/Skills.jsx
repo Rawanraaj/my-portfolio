@@ -4,10 +4,10 @@ const skills = [
   { name: 'Graphic Design', pct: 85 },
   { name: 'Video Editing', pct: 80 },
   { name: 'Website Maintenance', pct: 75 },
-  { name: 'HTML', pct: 65 },
-  { name: 'CSS', pct: 65 },
+  { name: 'HTML', pct: 50 },
+  { name: 'CSS', pct: 50 },
   { name: 'JavaScript', pct: 50 },
-  { name: 'React', pct: 40 },
+  { name: 'React', pct: 30 },
 ]
 
 const tools = [
@@ -47,10 +47,10 @@ export default function Skills() {
         <div className="section-header reveal">
           <span className="section-eyebrow">Skills</span>
           <h2 className="section-title">
-            My <span className="gradient-text">Toolkit</span> & Technologies
+            My <span className="gradient-text">Skills</span> & Used tools
           </h2>
           <p className="section-subtitle">
-            From creative design to frontend development — a constantly evolving skillset.
+            A very hard working person. Willing to learn new things.
           </p>
         </div>
 

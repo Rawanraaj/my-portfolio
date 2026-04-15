@@ -195,7 +195,7 @@ export default function Hero() {
 
           <p className="hero-greeting">// hello world, I'm</p>
           <h1 className="hero-name">
-            <span className="hero-name-gradient">Aalok Niroula</span>
+            <span className="hero-name-gradient"> Aalok Niroula </span>
           </h1>
 
           <div className="hero-role">
@@ -206,8 +206,8 @@ export default function Hero() {
           </div>
 
           <p className="hero-desc">
-            Crafting responsive, pixel-perfect web experiences from Kathmandu, Nepal.
-            Blending creative design with clean code.
+            An student who always had a learning attitude.
+            I am a quick learner and can pick up new skills very quickly.
           </p>
 
           <div className="hero-actions">
@@ -228,15 +228,15 @@ export default function Hero() {
           <div className="hero-stats-row">
             <div className="hero-stat">
               <span className="hero-stat-value">1+</span>
-              <span className="hero-stat-label">Years Experience</span>
+              <span className="hero-stat-label"> Years Experience </span>
             </div>
             <div className="hero-stat">
               <span className="hero-stat-value">3+</span>
-              <span className="hero-stat-label">Projects Built</span>
+              <span className="hero-stat-label"> Projects Built </span>
             </div>
             <div className="hero-stat">
               <span className="hero-stat-value">BCS</span>
-              <span className="hero-stat-label">IIMS College</span>
+              <span className="hero-stat-label"> IIMS College </span>
             </div>
           </div>
         </div>
