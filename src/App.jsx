@@ -68,7 +68,7 @@ export default function App() {
   return (
     <div style={{ position: 'relative' }} className="w-full min-h-screen bg-[#06060f] text-[#f0ece4] select-none">
       {/* fixed, z-index 0 */}
-      <NepalBackground isGestureActive={gestureState.isActive} />
+      <NepalBackground />
       
       {/* position:relative, z-index:1 */}
       <main style={{ position: 'relative', zIndex: 1 }} className="w-full flex flex-col">
