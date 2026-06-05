@@ -1,11 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 
 export default function NepalBackground() {
-  const canvasRef = useRef(null);
+  const starsCanvasRef = useRef(null);
 
   // Twinkling Star Canvas overlay logic
   useEffect(() => {
-    const canvas = canvasRef.current;
+    const canvas = starsCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let animationId;
@@ -61,81 +61,29 @@ export default function NepalBackground() {
   }, []);
 
   return (
-    <div 
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 0,
-        backgroundColor: '#06060f',
-        overflow: 'hidden',
-        pointerEvents: 'none'
-      }}
-    >
+    <div style={{position:'fixed',inset:0,zIndex:0,overflow:'hidden',background:'#06060f'}}>
       {/* Video 1: nepal-bg.mp4 (Base background animations) */}
       <video
-        src="/videos/nepal-bg.mp4"
-        autoPlay
-        loop
-        muted
-        playsInline
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          opacity: 0.35,
-        }}
-      />
+        autoPlay muted loop playsInline
+        style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:0.35,filter:'brightness(0.22) saturate(0.7)'}}
+        onError={e=>e.target.style.display='none'}
+      >
+        <source src="/videos/nepal-bg.mp4" type="video/mp4"/>
+      </video>
 
       {/* Video 2: nepal-bg1.mp4 (Overlay details blended simultaneously) */}
       <video
-        src="/videos/nepal-bg1.mp4"
-        autoPlay
-        loop
-        muted
-        playsInline
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          opacity: 0.25,
-          mixBlendMode: 'screen',
-        }}
-      />
+        autoPlay muted loop playsInline
+        style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:0.25,mixBlendMode:'screen',filter:'brightness(0.22) saturate(0.7)'}}
+        onError={e=>e.target.style.display='none'}
+      >
+        <source src="/videos/nepal-bg1.mp4" type="video/mp4"/>
+      </video>
 
-      {/* Readability filters: vignette radial gradient + solid black overlays */}
-      <div 
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(circle at 50% 50%, rgba(6, 6, 15, 0.4) 0%, #06060f 90%)',
-          zIndex: 1
-        }}
+      <canvas ref={starsCanvasRef}
+        style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:0.6,mixBlendMode:'screen',pointerEvents:'none'}}
       />
-      <div 
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundColor: 'rgba(6, 6, 15, 0.65)',
-          zIndex: 1
-        }}
-      />
-
-      {/* Twinkling Star Canvas overlay */}
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: 2,
-          pointerEvents: 'none',
-        }}
-      />
+      <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,rgba(6,6,15,0.1) 0%,rgba(6,6,15,0.5) 60%,rgba(6,6,15,0.95) 100%)',pointerEvents:'none'}}/>
     </div>
   );
 }

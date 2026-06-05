@@ -86,10 +86,12 @@ export default function Hero() {
 
   const [rotY, setRotY] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
+  const [isAutoSpinning, setIsAutoSpinning] = useState(true)
   const sceneRef = useRef(null)
   const dragStartRef = useRef(0)
   const rotStartRef = useRef(0)
   const autoSpinRef = useRef(null)
+  const snapTimeoutRef = useRef(null)
 
   const radius = 170 // 3D Circle radius for carousel cards positioning
 
@@ -110,12 +112,17 @@ export default function Hero() {
 
   useEffect(() => {
     startAutoSpin()
-    return () => stopAutoSpin()
+    return () => {
+      stopAutoSpin()
+      if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current)
+    }
   }, [startAutoSpin, stopAutoSpin])
 
   // Mouse / Touch Dragging controls
   const handleStart = (clientX) => {
+    if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current)
     setIsDragging(true)
+    setIsAutoSpinning(false)
     stopAutoSpin()
     dragStartRef.current = clientX
     rotStartRef.current = rotY
@@ -130,8 +137,13 @@ export default function Hero() {
   }
 
   const handleEnd = () => {
+    if (!isDragging) return
     setIsDragging(false)
-    startAutoSpin()
+    if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current)
+    snapTimeoutRef.current = setTimeout(() => {
+      setIsAutoSpinning(true)
+      startAutoSpin()
+    }, 400)
   }
 
   const onMouseDown = (e) => handleStart(e.clientX)
@@ -245,7 +257,7 @@ export default function Hero() {
               className="carousel-scene"
               style={{
                 transform: `rotateY(${rotY}deg)`,
-                transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                transition: isDragging || isAutoSpinning ? 'none' : 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
             >
               {navCards.map((card, i) => {

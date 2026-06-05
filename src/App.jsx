@@ -14,9 +14,6 @@ import Experience from './components/Experience'
 import Contact from './components/Contact'
 import Footer from './components/Footer'
 
-// Import hand gesture hook
-import useHandGesture from './hooks/useHandGesture'
-
 
 /* ═══════════════════════════════════════════════════════
    CUSTOM CURSOR — Supporting both Mouse & Gesture inputs
@@ -151,7 +148,6 @@ export default function App() {
   const activeSection = useActiveSection()
   useScrollReveal()
   const scrollProgress = useScrollProgress()
-  const gestureState = useHandGesture()
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -164,7 +160,7 @@ export default function App() {
   }, [])
 
   return (
-    <>
+    <div style={{ position: 'relative' }}>
       {/* Custom cursor — desktop only */}
       {typeof window !== 'undefined' && !('ontouchstart' in window) && <CustomCursor />}
 
@@ -190,7 +186,7 @@ export default function App() {
       <Footer />
 
       {/* Hand Gesture controller overlays */}
-      <GestureOverlay gestureState={gestureState} />
-    </>
+      <GestureOverlay />
+    </div>
   )
 }
