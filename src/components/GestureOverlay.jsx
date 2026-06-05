@@ -90,7 +90,9 @@ export default function GestureOverlay({ gestureState }) {
         WebkitBackdropFilter: 'blur(8px)',
         opacity: isFading ? 0 : 1,
         transition: 'opacity 0.4s ease-in-out',
-        padding: '20px'
+        padding: '20px',
+        pointerEvents: 'auto',
+        cursor: 'default'
       }}
     >
       <div
@@ -103,7 +105,8 @@ export default function GestureOverlay({ gestureState }) {
           boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '20px'
+          gap: '20px',
+          pointerEvents: 'auto'
         }}
       >
         <div style={{ textAlign: 'center' }}>
@@ -155,6 +158,7 @@ export default function GestureOverlay({ gestureState }) {
             fontWeight: 500,
             fontSize: '14px',
             cursor: 'pointer',
+            pointerEvents: 'auto',
             transition: 'background-color 0.2s',
             marginTop: '8px'
           }}

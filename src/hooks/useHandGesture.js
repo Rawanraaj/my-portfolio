@@ -10,19 +10,33 @@ const HAND_CONNECTIONS = [
 ];
 
 // Helper to count extended fingers, accounting for mirrored coordinates
+// Returns { count, details } for debug visibility
 const countFingers = (landmarks) => {
   const tips = [8, 12, 16, 20];      // index, middle, ring, pinky tips
   const pips = [6, 10, 14, 18];      // their middle joints
+  const names = ['IDX', 'MID', 'RNG', 'PNK'];
   let count = 0;
+  const details = [];
   
   tips.forEach((tip, i) => {
-    if (landmarks[tip].y < landmarks[pips[i]].y) count++;
+    const diff = landmarks[pips[i]].y - landmarks[tip].y; // positive = extended
+    const extended = diff > 0.02;
+    if (extended) count++;
+    details.push({ name: names[i], extended, diff: diff.toFixed(3) });
   });
   
-  // Thumb check: Y-axis tip above joint (independent of mirrored orientation)
-  if (landmarks[4].y < landmarks[3].y) count++;
+  // Thumb: must be BOTH extended upward AND spread away from palm
+  // Compare tip (4) vs MCP joint (2) for extension — more stable than vs IP (3)
+  const thumbYDiff = landmarks[2].y - landmarks[4].y; // positive = tip above MCP
+  const thumbExtended = thumbYDiff > 0.04;
+  // Thumb must also be spread away from index base (5) on X axis
+  const thumbXDiff = Math.abs(landmarks[4].x - landmarks[5].x);
+  const thumbSpread = thumbXDiff > 0.06;
+  const thumbUp = thumbExtended && thumbSpread;
+  if (thumbUp) count++;
+  details.push({ name: 'THB', extended: thumbUp, diff: `Y${thumbYDiff.toFixed(3)} X${thumbXDiff.toFixed(3)}` });
   
-  return count;
+  return { count, details };
 };
 
 export default function useHandGesture() {
@@ -39,6 +53,7 @@ export default function useHandGesture() {
   const topStartTimeRef = useRef(null);
   const topTriggeredRef = useRef(false);
   const scrollVelocityRef = useRef(0);
+  const debugInfoRef = useRef({ count: 0, details: [] });
   
   // GC optimization: circular fixed-size array instead of push/shift
   const gestureBufferRef = useRef(new Array(12).fill('None'));
@@ -121,11 +136,25 @@ export default function useHandGesture() {
 
     ctx.restore();
 
-    // Draw committed gesture label
+    // ── DEBUG OVERLAY ──────────────────────────────────────
+    const dbg = debugInfoRef.current;
+    ctx.textAlign = 'center';
+    // Big finger count number
+    ctx.fillStyle = '#ffff00';
+    ctx.font = 'bold 16px "JetBrains Mono", monospace';
+    ctx.fillText(`FINGERS: ${dbg.count}`, canvas.width / 2, 16);
+    // Per-finger breakdown
+    ctx.font = '9px "JetBrains Mono", monospace';
+    if (dbg.details && dbg.details.length) {
+      const line = dbg.details.map(d => `${d.name}:${d.extended ? '✓' : '✗'}(${d.diff})`).join(' ');
+      ctx.fillStyle = '#ffff00';
+      ctx.fillText(line, canvas.width / 2, 30);
+    }
+    // Committed gesture label
     ctx.fillStyle = '#00ffff';
     ctx.font = '12px "JetBrains Mono", monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(currentGesture.toUpperCase(), canvas.width / 2, 20);
+    ctx.fillText(currentGesture.toUpperCase(), canvas.width / 2, 44);
+    // ── END DEBUG ──────────────────────────────────────────
   }, []);
 
   const processGestures = useCallback((landmarks) => {
@@ -150,7 +179,9 @@ export default function useHandGesture() {
     if (dist < 0.05) {
       rawGesture = 'CLICK';
     } else {
-      const fingers = countFingers(landmarks);
+      const result = countFingers(landmarks);
+      debugInfoRef.current = result;
+      const fingers = result.count;
       if (fingers === 2) {
         rawGesture = 'SCROLL_DOWN';
       } else if (fingers === 3) {
