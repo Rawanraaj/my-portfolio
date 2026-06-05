@@ -27,8 +27,8 @@ const parseSVGPath = (pathString) => {
   return points;
 };
 
-// Layer 1: Himalayan Mountain Silhouette Plane
-function Mountains({ scrollProgress }) {
+// LAYER 1 — Mountain Silhouettes
+function MountainLayer({ drawFn, color, zPos, scrollProgress, parallaxFactor }) {
   const planeRef = useRef();
 
   const texture = useMemo(() => {
@@ -36,129 +36,90 @@ function Mountains({ scrollProgress }) {
     canvas.width = 2048;
     canvas.height = 1024;
     const ctx = canvas.getContext('2d');
-
-    // Gradient background: deep navy #0a0a1a to #1a0a2e
-    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, '#0a0a1a');
-    grad.addColorStop(1, '#1a0a2e');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Mountains silhouette: deep navy #0d0d1d
-    ctx.fillStyle = '#0d0d1d';
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.moveTo(0, canvas.height);
-    ctx.lineTo(0, canvas.height * 0.75);
-    ctx.lineTo(160, canvas.height * 0.62);
-    ctx.lineTo(320, canvas.height * 0.68);
-    ctx.lineTo(480, canvas.height * 0.5);
-    ctx.lineTo(560, canvas.height * 0.58);
-    ctx.lineTo(760, canvas.height * 0.3); // Everest peak
-    ctx.lineTo(880, canvas.height * 0.44);
-    ctx.lineTo(1000, canvas.height * 0.36); // Lhotse peak
-    ctx.lineTo(1200, canvas.height * 0.58);
-    ctx.lineTo(1400, canvas.height * 0.42); // Cho Oyu peak
-    ctx.lineTo(1560, canvas.height * 0.52);
-    ctx.lineTo(1760, canvas.height * 0.38); // Shishapangma peak
-    ctx.lineTo(2048, canvas.height * 0.68);
-    ctx.lineTo(2048, canvas.height);
-    ctx.closePath();
+    drawFn(ctx, canvas.width, canvas.height);
     ctx.fill();
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.ClampToEdgeWrapping;
     tex.wrapT = THREE.ClampToEdgeWrapping;
     return tex;
-  }, []);
+  }, [drawFn, color]);
 
   useFrame(() => {
     if (planeRef.current) {
-      // Subtle parallax: mountains move up 15% of scroll (mountains "rise" as you scroll)
-      planeRef.current.position.y = -0.5 + scrollProgress.current * 1.2;
+      // Custom Y scrolling speed
+      planeRef.current.position.y = -1.2 + scrollProgress.current * parallaxFactor;
     }
   });
 
   return (
-    <mesh ref={planeRef} position={[0, -0.5, -5.5]}>
+    <mesh ref={planeRef} position={[0, -1.2, zPos]}>
       <planeGeometry args={[16, 8]} />
-      <meshBasicMaterial map={texture} depthWrite={false} />
+      <meshBasicMaterial map={texture} transparent depthWrite={false} />
     </mesh>
   );
 }
 
-// Layer 2: Particle Constellation (City Lights)
-function CityParticles({ scrollProgress, isGestureActive }) {
+// LAYER 2 — Stars (Pinpoint Twinkling Lights)
+function Stars({ scrollProgress }) {
   const pointsRef = useRef();
-  const count = 2000;
+  const count = 3000;
 
-  // Initialize particle positions, sizes, speeds, base colors, and gesture target colors
-  const [positions, sizes, speeds, baseColors, targetColors] = useMemo(() => {
+  const [positions, sizes, randoms, opacities, colors] = useMemo(() => {
     const pos = new Float32Array(count * 3);
     const szs = new Float32Array(count);
-    const spds = new Float32Array(count);
-    const baseCol = new Float32Array(count * 3);
-    const targetCol = new Float32Array(count * 3);
+    const rnds = new Float32Array(count);
+    const opacs = new Float32Array(count);
+    const cols = new Float32Array(count * 3);
 
     for (let i = 0; i < count; i++) {
-      // Random position in a 20x10x5 box
-      pos[i * 3] = (Math.random() - 0.5) * 20; // x: [-10, 10]
-      pos[i * 3 + 1] = (Math.random() - 0.5) * 10; // y: [-5, 5]
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 5 - 3; // z: [-5.5, -0.5]
+      // Upper 70% sky coordinates
+      pos[i * 3] = (Math.random() - 0.5) * 24; // x: wide span
+      pos[i * 3 + 1] = -0.5 + Math.random() * 6.5; // y: sky area
+      pos[i * 3 + 2] = -6.5 + Math.random() * 0.5; // z: behind mountains
 
-      // Random sizes 0.5px to 2.5px
-      szs[i] = 0.5 + Math.random() * 2.0;
-
-      // Speed factor
-      spds[i] = 0.4 + Math.random() * 0.6;
-
-      // Kathmandu city lights colors:
-      // Mix of warm amber #ffb347 (70%) and cool cyan #00ffff (30%)
-      const isWarm = Math.random() < 0.7;
-      if (isWarm) {
-        // Amber #ffb347 -> rgb(1.0, 0.70, 0.28)
-        baseCol[i * 3] = 1.0;
-        baseCol[i * 3 + 1] = 0.70;
-        baseCol[i * 3 + 2] = 0.28;
+      // Size: 50 bright stars are 2.0px, others are 0.5px to 1.5px
+      if (i < 50) {
+        szs[i] = 2.0;
       } else {
-        // Cyan #00ffff -> rgb(0.0, 1.0, 1.0)
-        baseCol[i * 3] = 0.0;
-        baseCol[i * 3 + 1] = 1.0;
-        baseCol[i * 3 + 2] = 1.0;
+        szs[i] = 0.5 + Math.random() * 1.0;
       }
 
-      // Gesture target color: shift more towards cyan (e.g. 80% cyan, 20% amber)
-      const isTargetCyan = Math.random() < 0.8;
-      if (isTargetCyan) {
-        targetCol[i * 3] = 0.0;
-        targetCol[i * 3 + 1] = 1.0;
-        targetCol[i * 3 + 2] = 1.0;
+      // Unique frequency factor for twinkle speed
+      rnds[i] = 0.5 + Math.random() * 1.5;
+
+      // Base opacity: 0.3 to 0.7
+      opacs[i] = 0.3 + Math.random() * 0.4;
+
+      // Star colors: 80% white (#ffffff), 20% soft blue (#a8c4ff)
+      const isBlue = Math.random() < 0.20;
+      if (isBlue) {
+        // Soft blue #a8c4ff
+        cols[i * 3] = 0.66;
+        cols[i * 3 + 1] = 0.77;
+        cols[i * 3 + 2] = 1.0;
       } else {
-        targetCol[i * 3] = 1.0;
-        targetCol[i * 3 + 1] = 0.70;
-        targetCol[i * 3 + 2] = 0.28;
+        // White #ffffff
+        cols[i * 3] = 1.0;
+        cols[i * 3 + 1] = 1.0;
+        cols[i * 3 + 2] = 1.0;
       }
     }
 
-    return [pos, szs, spds, baseCol, targetCol];
+    return [pos, szs, rnds, opacs, cols];
   }, []);
 
   const uniforms = useMemo(() => ({
-    uTime: { value: 0 },
-    uScroll: { value: 0 },
-    uGesture: { value: 0 }
+    uTime: { value: 0 }
   }), []);
 
   useFrame((state, delta) => {
     if (pointsRef.current) {
-      // Increment time
       uniforms.uTime.value += delta;
-      
-      // Pass scroll progress
-      uniforms.uScroll.value = scrollProgress.current;
-
-      // Smoothly transition the gesture uniform towards target
-      const targetGesture = isGestureActive ? 1.0 : 0.0;
-      uniforms.uGesture.value += (targetGesture - uniforms.uGesture.value) * 0.08;
     }
   });
 
@@ -166,50 +127,37 @@ function CityParticles({ scrollProgress, isGestureActive }) {
     return new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
       uniforms,
       vertexShader: `
         uniform float uTime;
-        uniform float uScroll;
-        uniform float uGesture;
         attribute float aSize;
-        attribute float aSpeed;
-        attribute vec3 aBaseColor;
-        attribute vec3 aTargetColor;
+        attribute float aRandom;
+        attribute float aBaseOpacity;
+        attribute vec3 aColor;
         varying vec3 vColor;
+        varying float vOpacity;
 
         void main() {
-          // Mix colors based on gesture activation
-          vec3 mixedColor = mix(aBaseColor, aTargetColor, uGesture);
-
-          // Shift hue warmer (towards orange-red) towards the bottom of the page (uScroll)
-          vec3 warmColor = mix(mixedColor, vec3(1.0, 0.45, 0.1), uScroll * 0.4);
-          vColor = warmColor;
-
-          // Position setup
-          vec3 pos = position;
-
-          // Float upwards: speed increases when gesture is active
-          float driftSpeed = mix(0.12, 0.45, uGesture) * aSpeed;
-          pos.y += uTime * driftSpeed;
+          vColor = aColor;
           
-          // Wrap position inside Y [-5.0, 5.0]
-          pos.y = mod(pos.y + 5.0, 10.0) - 5.0;
-
-          vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+          // Twinkle logic: Sinusoidal opacity oscillation
+          vOpacity = aBaseOpacity + (1.0 - aBaseOpacity) * 0.4 * (sin(uTime * aRandom * 1.8) + 0.2);
+          
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
           gl_Position = projectionMatrix * mvPosition;
           
-          // Size attenuation
-          gl_PointSize = aSize * (250.0 / -mvPosition.z);
+          gl_PointSize = aSize;
         }
       `,
       fragmentShader: `
         varying vec3 vColor;
+        varying float vOpacity;
+
         void main() {
-          // Circular soft particle shape
+          // Sharp pinpoint drawing
           float dist = distance(gl_PointCoord, vec2(0.5));
           if (dist > 0.5) discard;
-          float alpha = smoothstep(0.5, 0.15, dist) * 0.85;
+          float alpha = smoothstep(0.5, 0.42, dist) * vOpacity;
           gl_FragColor = vec4(vColor, alpha);
         }
       `
@@ -228,16 +176,16 @@ function CityParticles({ scrollProgress, isGestureActive }) {
           args={[sizes, 1]}
         />
         <bufferAttribute
-          attach="attributes-aSpeed"
-          args={[speeds, 1]}
+          attach="attributes-aRandom"
+          args={[randoms, 1]}
         />
         <bufferAttribute
-          attach="attributes-aBaseColor"
-          args={[baseColors, 3]}
+          attach="attributes-aBaseOpacity"
+          args={[opacities, 1]}
         />
         <bufferAttribute
-          attach="attributes-aTargetColor"
-          args={[targetColors, 3]}
+          attach="attributes-aColor"
+          args={[colors, 3]}
         />
       </bufferGeometry>
       <primitive object={material} attach="material" />
@@ -245,17 +193,41 @@ function CityParticles({ scrollProgress, isGestureActive }) {
   );
 }
 
-// Layer 3: Static Cultural Geometry Accents
+// LAYER 3 — Kathmandu City Glow at Mountain Ridgeline
+function RidgelineGlow() {
+  const texture = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    // Horizontal glow represented as vertical fade in/out
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, 'rgba(255, 140, 0, 0)');
+    grad.addColorStop(0.5, 'rgba(255, 140, 0, 0.04)'); // Amber glow #ff8c00 at exactly 4% opacity
+    grad.addColorStop(1, 'rgba(255, 140, 0, 0)');
+    
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  }, []);
+
+  // Positioned exactly along the general mountain horizon line (y = -0.5)
+  return (
+    <mesh position={[0, -0.5, -5.9]}>
+      <planeGeometry args={[16, 1.2]} />
+      <meshBasicMaterial map={texture} transparent depthWrite={false} blending={THREE.AdditiveBlending} />
+    </mesh>
+  );
+}
+
+// LAYER 4 — Static Cultural Geometry outlines (fixed opacity values)
 function CulturalGeometry() {
   // Dharahara outline path
   const dharaharaPoints = useMemo(() => {
     const path = "M -0.15 -2 L 0.15 -2 L 0.15 1.5 L -0.15 1.5 Z M -0.25 1.5 L 0.25 1.5 L 0.25 1.62 L -0.25 1.62 Z M -0.12 1.62 L -0.12 2.1 L 0 2.4 L 0.12 2.1 L 0.12 1.62 Z M 0 2.4 L 0 2.7";
-    return parseSVGPath(path);
-  }, []);
-
-  // Pashupatinath outline path
-  const pashupatinathPoints = useMemo(() => {
-    const path = "M -1.0 -1.5 L 1.0 -1.5 L 1.25 -1.0 L 0.4 -0.6 L -0.4 -0.6 L -1.25 -1.0 Z M -0.55 -0.6 L 0.55 -0.6 L 0.7 0.0 L 0.2 0.4 L -0.2 0.4 L -0.7 0.0 Z M -0.15 0.4 L 0.15 0.4 L 0.15 0.55 L -0.15 0.55 Z M 0 0.55 L 0 0.9";
     return parseSVGPath(path);
   }, []);
 
@@ -277,34 +249,40 @@ function CulturalGeometry() {
     return parseSVGPath(path);
   }, []);
 
+  // Pashupatinath outline path
+  const pashupatinathPoints = useMemo(() => {
+    const path = "M -1.0 -1.5 L 1.0 -1.5 L 1.25 -1.0 L 0.4 -0.6 L -0.4 -0.6 L -1.25 -1.0 Z M -0.55 -0.6 L 0.55 -0.6 L 0.7 0.0 L 0.2 0.4 L -0.2 0.4 L -0.7 0.0 Z M -0.15 0.4 L 0.15 0.4 L 0.15 0.55 L -0.15 0.55 Z M 0 0.55 L 0 0.9";
+    return parseSVGPath(path);
+  }, []);
+
   const dharaharaGeo = useMemo(() => new THREE.BufferGeometry().setFromPoints(dharaharaPoints), [dharaharaPoints]);
-  const pashupatiGeo = useMemo(() => new THREE.BufferGeometry().setFromPoints(pashupatinathPoints), [pashupatinathPoints]);
   const boudhaGeo = useMemo(() => new THREE.BufferGeometry().setFromPoints(boudhanathPoints), [boudhanathPoints]);
+  const pashupatiGeo = useMemo(() => new THREE.BufferGeometry().setFromPoints(pashupatinathPoints), [pashupatinathPoints]);
 
   return (
     <group>
-      {/* Dharahara: Center, Z = -4.8 */}
-      <line position={[0.2, -0.6, -4.8]} scale={[0.85, 0.85, 1]}>
+      {/* Dharahara: Left side, stroke opacity 0.06 */}
+      <line position={[-3.8, -0.6, -4.8]} scale={[0.85, 0.85, 1]}>
         <primitive object={dharaharaGeo} attach="geometry" />
-        <lineBasicMaterial color="#f0ece4" transparent opacity={0.03} depthWrite={false} />
+        <lineBasicMaterial color="#f0ece4" transparent opacity={0.06} depthWrite={false} />
       </line>
 
-      {/* Pashupatinath: Far left, Z = -4.0 */}
-      <line position={[-3.8, -0.9, -4.0]} scale={[0.8, 0.8, 1]}>
-        <primitive object={pashupatiGeo} attach="geometry" />
-        <lineBasicMaterial color="#f0ece4" transparent opacity={0.04} depthWrite={false} />
-      </line>
-
-      {/* Boudhanath: Far right, Z = -4.0 */}
-      <line position={[3.6, -0.9, -4.0]} scale={[0.85, 0.85, 1]}>
+      {/* Boudhanath: Center-right, stroke opacity 0.05 */}
+      <line position={[1.2, -0.9, -4.6]} scale={[0.85, 0.85, 1]}>
         <primitive object={boudhaGeo} attach="geometry" />
-        <lineBasicMaterial color="#f0ece4" transparent opacity={0.03} depthWrite={false} />
+        <lineBasicMaterial color="#f0ece4" transparent opacity={0.05} depthWrite={false} />
+      </line>
+
+      {/* Pashupatinath: Far right, stroke opacity 0.05 */}
+      <line position={[3.6, -0.9, -4.6]} scale={[0.8, 0.8, 1]}>
+        <primitive object={pashupatiGeo} attach="geometry" />
+        <lineBasicMaterial color="#f0ece4" transparent opacity={0.05} depthWrite={false} />
       </line>
     </group>
   );
 }
 
-// Controller element for camera scroll parallax
+// Controller for Camera Parallax (Z moves 0 to -2)
 function SceneController({ scrollProgress }) {
   const { camera } = useThree();
 
@@ -316,10 +294,10 @@ function SceneController({ scrollProgress }) {
   return null;
 }
 
-export default function NepalBackground({ isGestureActive }) {
+export default function NepalBackground() {
   const scrollProgress = useRef(0);
 
-  // Passive window scroll listener to avoid scroll hijacking
+  // Passive window scroll listener
   useEffect(() => {
     const handleScroll = () => {
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
@@ -330,6 +308,45 @@ export default function NepalBackground({ isGestureActive }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Silhouette drawing functions for Layer 1
+  const drawFarMountains = (ctx, w, h) => {
+    ctx.moveTo(0, h);
+    ctx.lineTo(0, h * 0.70);
+    ctx.lineTo(w * 0.12, h * 0.58);
+    ctx.lineTo(w * 0.28, h * 0.65);
+    ctx.lineTo(w * 0.42, h * 0.50);
+    ctx.lineTo(w * 0.55, h * 0.60);
+    ctx.lineTo(w * 0.70, h * 0.40); // Everest Shape Peak
+    ctx.lineTo(w * 0.80, h * 0.52);
+    ctx.lineTo(w * 0.90, h * 0.45);
+    ctx.lineTo(w, h * 0.60);
+    ctx.lineTo(w, h);
+  };
+
+  const drawMidMountains = (ctx, w, h) => {
+    ctx.moveTo(0, h);
+    ctx.lineTo(0, h * 0.75);
+    ctx.lineTo(w * 0.18, h * 0.62);
+    ctx.lineTo(w * 0.35, h * 0.70);
+    ctx.lineTo(w * 0.50, h * 0.55);
+    ctx.lineTo(w * 0.68, h * 0.65);
+    ctx.lineTo(w * 0.82, h * 0.58);
+    ctx.lineTo(w, h * 0.72);
+    ctx.lineTo(w, h);
+  };
+
+  const drawNearMountains = (ctx, w, h) => {
+    ctx.moveTo(0, h);
+    ctx.lineTo(0, h * 0.80);
+    ctx.lineTo(w * 0.22, h * 0.70);
+    ctx.lineTo(w * 0.45, h * 0.78);
+    ctx.lineTo(w * 0.60, h * 0.68);
+    ctx.lineTo(w * 0.75, h * 0.75);
+    ctx.lineTo(w * 0.88, h * 0.70);
+    ctx.lineTo(w, h * 0.80);
+    ctx.lineTo(w, h);
+  };
+
   return (
     <div 
       className="fixed inset-0 pointer-events-none"
@@ -339,15 +356,44 @@ export default function NepalBackground({ isGestureActive }) {
         camera={{ position: [0, 0, 0], fov: 75, near: 0.1, far: 20 }}
         gl={{ antialias: true, alpha: false }}
       >
+        {/* Set Renderer background color to #06060f (almost black) */}
+        <color attach="background" args={['#06060f']} />
+        
         <SceneController scrollProgress={scrollProgress} />
         
-        {/* Layer 1: Mountain Plane */}
-        <Mountains scrollProgress={scrollProgress} />
+        {/* LAYER 2: Stars (Tiny pinpoints, deep background layer) */}
+        <Stars scrollProgress={scrollProgress} />
         
-        {/* Layer 2: Kathmandu City Lights Particles */}
-        <CityParticles scrollProgress={scrollProgress} isGestureActive={isGestureActive} />
-        
-        {/* Layer 3: Static Cultural Geometry outlines */}
+        {/* LAYER 3: Horizon Kathmandu City Glow */}
+        <RidgelineGlow />
+
+        {/* LAYER 1: 3 Layered Himalayan Mountains with separate parallax rates */}
+        {/* Far layer: lightest (#12121f), moves 5px per 100px (0.4x relative scale) */}
+        <MountainLayer 
+          drawFn={drawFarMountains} 
+          color="#12121f" 
+          zPos={-5.8} 
+          scrollProgress={scrollProgress} 
+          parallaxFactor={0.4} 
+        />
+        {/* Mid layer: medium (#0d0d1a), moves 10px per 100px (0.8x relative scale) */}
+        <MountainLayer 
+          drawFn={drawMidMountains} 
+          color="#0d0d1a" 
+          zPos={-5.4} 
+          scrollProgress={scrollProgress} 
+          parallaxFactor={0.8} 
+        />
+        {/* Near layer: darkest (#080810), moves 15px per 100px (1.2x relative scale) */}
+        <MountainLayer 
+          drawFn={drawNearMountains} 
+          color="#080810" 
+          zPos={-5.0} 
+          scrollProgress={scrollProgress} 
+          parallaxFactor={1.2} 
+        />
+
+        {/* LAYER 4: Static transparent outline cultural geometry shapes */}
         <CulturalGeometry />
       </Canvas>
     </div>
