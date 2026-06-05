@@ -9,6 +9,70 @@ const HAND_CONNECTIONS = [
   [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]
 ];
 
+// Helper to analyze hand movement history for wave gestures
+const analyzeHistory = (history, currentPt) => {
+  if (history.length < 5) return null;
+  
+  const now = Date.now();
+  // Filter history to last 500ms
+  const recent = history.filter(p => now - p.t < 500);
+  if (recent.length < 5) return null;
+  
+  // Find min/max and direction changes in X (for horizontal wave)
+  let minX = recent[0].x, maxX = recent[0].x;
+  let minY = recent[0].y, maxY = recent[0].y;
+  let totalDistX = 0;
+  let directionChangesX = 0;
+  let lastDeltaX = 0;
+  
+  for (let i = 1; i < recent.length; i++) {
+    const p = recent[i];
+    const prev = recent[i - 1];
+    
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+    
+    const deltaX = p.x - prev.x;
+    totalDistX += Math.abs(deltaX);
+    
+    if (i > 1 && deltaX !== 0 && lastDeltaX !== 0) {
+      if (Math.sign(deltaX) !== Math.sign(lastDeltaX)) {
+        directionChangesX++;
+      }
+    }
+    if (deltaX !== 0) {
+      lastDeltaX = deltaX;
+    }
+  }
+  
+  // Find a point around 150ms-400ms ago to detect vertical swipes
+  const swipeStartPt = recent.find(p => now - p.t >= 150 && now - p.t <= 400);
+  
+  let swipeY = 0;
+  if (swipeStartPt) {
+    const dy = currentPt.y - swipeStartPt.y;
+    // Y decreases as hand moves up
+    if (dy < -0.12) {
+      swipeY = -1; // Wave/Swipe Up
+    } else if (dy > 0.12) {
+      swipeY = 1; // Wave/Swipe Down
+    }
+  }
+  
+  // Detect side-to-side wave:
+  // - Hand has moved back and forth (min 2 direction changes)
+  // - Width span is wide enough (> 0.08)
+  // - Total distance traveled horizontally is large (> 0.15)
+  const isHorizontalWave = (maxX - minX > 0.08) && (directionChangesX >= 2) && (totalDistX > 0.15);
+  
+  return {
+    swipeY,
+    isHorizontalWave
+  };
+};
+
 export default function useHandGesture() {
   const [isActive, setIsActive] = useState(false);
   const [gesture, setGesture] = useState('None');
@@ -19,6 +83,8 @@ export default function useHandGesture() {
   const lastVideoTimeRef = useRef(-1);
   const lastPinchTimeRef = useRef(0);
   const fistStartTimeRef = useRef(null);
+  const scrollVelocityRef = useRef(0);
+  const historyRef = useRef([]);
 
   // Initialize HandLandmarker on mount
   useEffect(() => {
@@ -114,7 +180,13 @@ export default function useHandGesture() {
     const lm16 = landmarks[16];
     const lm20 = landmarks[20];
 
-    if (!lm8) return 'None';
+    if (!lm8 || !lm9) return 'None';
+
+    const now = Date.now();
+
+    // Track position in history
+    historyRef.current.push({ x: lm9.x, y: lm9.y, t: now });
+    historyRef.current = historyRef.current.filter(p => now - p.t < 500);
 
     // Position Custom Cursor
     if (window.__setCursorPos) {
@@ -124,13 +196,27 @@ export default function useHandGesture() {
       window.__setCursorPos(targetX, targetY);
     }
 
+    // Distance for pinch check
+    const dist = Math.sqrt(Math.pow(lm4.x - lm8.x, 2) + Math.pow(lm4.y - lm8.y, 2));
+
+    // Palm check (Open hand): Index, Middle, Ring, Pinky all extended (tip Y < knuckle Y)
+    // and they should be spread out/not pinching.
+    const isPalm = lm8.y < lm5.y && lm12.y < lm9.y && lm16.y < lm13.y && lm20.y < lm17.y && dist >= 0.06;
+
+    if (isPalm) {
+      scrollVelocityRef.current = 0;
+      historyRef.current = []; // Clear history to prevent lingering wave detections
+      return 'Palm / Stop';
+    }
+
     // Fist Check: All fingers curled (tips lower than knuckles, meaning tip Y > knuckle Y)
     const isFist = lm8.y > lm5.y && lm12.y > lm9.y && lm16.y > lm13.y && lm20.y > lm17.y;
     if (isFist) {
       if (!fistStartTimeRef.current) {
-        fistStartTimeRef.current = Date.now();
-      } else if (Date.now() - fistStartTimeRef.current > 500) {
+        fistStartTimeRef.current = now;
+      } else if (now - fistStartTimeRef.current > 500) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        scrollVelocityRef.current = 0;
         fistStartTimeRef.current = null;
       }
       return 'Fist';
@@ -138,10 +224,8 @@ export default function useHandGesture() {
       fistStartTimeRef.current = null;
     }
 
-    // Pinch Check: Dist landmark 4 and 8 < 0.05
-    const dist = Math.sqrt(Math.pow(lm4.x - lm8.x, 2) + Math.pow(lm4.y - lm8.y, 2));
+    // Pinch Check: click trigger
     if (dist < 0.05) {
-      const now = Date.now();
       if (now - lastPinchTimeRef.current > 800) {
         lastPinchTimeRef.current = now;
         const targetX = (1 - lm8.x) * window.innerWidth;
@@ -164,11 +248,21 @@ export default function useHandGesture() {
       return 'Pinch';
     }
 
-    // Default tracking mode: Scroll zones
-    if (lm8.y < 0.2) {
-      window.scrollBy(0, -8 * (0.2 - lm8.y) * 50);
-    } else if (lm8.y > 0.8) {
-      window.scrollBy(0, 8 * (lm8.y - 0.8) * 50);
+    // Analyze history for dynamic scrolling waves
+    const analysis = analyzeHistory(historyRef.current, lm9);
+    if (analysis) {
+      if (analysis.swipeY === -1) {
+        scrollVelocityRef.current = -5; // Scroll Up
+      } else if (analysis.swipeY === 1 || analysis.isHorizontalWave) {
+        scrollVelocityRef.current = 5; // Scroll Down
+      }
+    }
+
+    // Return the corresponding label
+    if (scrollVelocityRef.current < 0) {
+      return 'Scroll Up';
+    } else if (scrollVelocityRef.current > 0) {
+      return 'Scroll Down';
     }
 
     return 'Tracking';
@@ -188,6 +282,7 @@ export default function useHandGesture() {
           setGesture(detectedGesture);
           drawSkeleton(landmarks, detectedGesture);
         } else {
+          scrollVelocityRef.current = 0;
           setGesture('None');
           const canvas = canvasRef.current;
           if (canvas) {
@@ -197,6 +292,11 @@ export default function useHandGesture() {
         }
       }
     }
+
+    if (scrollVelocityRef.current !== 0) {
+      window.scrollBy(0, scrollVelocityRef.current);
+    }
+
     requestRef.current = requestAnimationFrame(predictLoop);
   }, [processGestures, drawSkeleton]);
 
@@ -235,6 +335,8 @@ export default function useHandGesture() {
     }
     setIsActive(false);
     setGesture('None');
+    scrollVelocityRef.current = 0;
+    historyRef.current = [];
   }, [isActive]);
 
   // Cleanup on unmount
