@@ -9,68 +9,20 @@ const HAND_CONNECTIONS = [
   [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]
 ];
 
-// Helper to analyze hand movement history for wave gestures
-const analyzeHistory = (history, currentPt) => {
-  if (history.length < 5) return null;
+// Helper to count extended fingers, accounting for mirrored coordinates
+const countFingers = (landmarks) => {
+  const tips = [8, 12, 16, 20];      // index, middle, ring, pinky tips
+  const pips = [6, 10, 14, 18];      // their middle joints
+  let count = 0;
   
-  const now = Date.now();
-  // Filter history to last 500ms
-  const recent = history.filter(p => now - p.t < 500);
-  if (recent.length < 5) return null;
+  tips.forEach((tip, i) => {
+    if (landmarks[tip].y < landmarks[pips[i]].y) count++;
+  });
   
-  // Find min/max and direction changes in X (for horizontal wave)
-  let minX = recent[0].x, maxX = recent[0].x;
-  let minY = recent[0].y, maxY = recent[0].y;
-  let totalDistX = 0;
-  let directionChangesX = 0;
-  let lastDeltaX = 0;
+  // Thumb check: Y-axis tip above joint (independent of mirrored orientation)
+  if (landmarks[4].y < landmarks[3].y) count++;
   
-  for (let i = 1; i < recent.length; i++) {
-    const p = recent[i];
-    const prev = recent[i - 1];
-    
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-    
-    const deltaX = p.x - prev.x;
-    totalDistX += Math.abs(deltaX);
-    
-    if (i > 1 && deltaX !== 0 && lastDeltaX !== 0) {
-      if (Math.sign(deltaX) !== Math.sign(lastDeltaX)) {
-        directionChangesX++;
-      }
-    }
-    if (deltaX !== 0) {
-      lastDeltaX = deltaX;
-    }
-  }
-  
-  // Find a point around 150ms-400ms ago to detect vertical swipes
-  const swipeStartPt = recent.find(p => now - p.t >= 150 && now - p.t <= 400);
-  
-  let swipeY = 0;
-  if (swipeStartPt) {
-    const dy = currentPt.y - swipeStartPt.y;
-    // Y decreases as hand moves up
-    if (dy < -0.12) {
-      swipeY = -1; // Wave/Swipe Up
-    } else if (dy > 0.12) {
-      swipeY = 1; // Wave/Swipe Down
-    }
-  }
-  
-  // Detect side-to-side wave:
-  // - Hand has moved back and forth (min 2 direction changes)
-  // - Width span is wide enough (> 0.08)
-  // - Total distance traveled horizontally is large (> 0.15)
-  const isHorizontalWave = (maxX - minX > 0.08) && (directionChangesX >= 2) && (totalDistX > 0.15);
-  
-  return {
-    swipeY,
-    isHorizontalWave
-  };
+  return count;
 };
 
 export default function useHandGesture() {
@@ -81,10 +33,17 @@ export default function useHandGesture() {
   const handLandmarkerRef = useRef(null);
   const requestRef = useRef(null);
   const lastVideoTimeRef = useRef(-1);
+  
+  // Timing / gesture tracking variables
   const lastPinchTimeRef = useRef(0);
-  const fistStartTimeRef = useRef(null);
+  const topStartTimeRef = useRef(null);
+  const topTriggeredRef = useRef(false);
   const scrollVelocityRef = useRef(0);
-  const historyRef = useRef([]);
+  
+  // GC optimization: circular fixed-size array instead of push/shift
+  const gestureBufferRef = useRef(new Array(12).fill('None'));
+  const frameCountRef = useRef(0);
+  const committedGestureRef = useRef('None');
 
   // Initialize HandLandmarker on mount
   useEffect(() => {
@@ -162,7 +121,7 @@ export default function useHandGesture() {
 
     ctx.restore();
 
-    // Draw gesture label in JetBrains Mono
+    // Draw committed gesture label
     ctx.fillStyle = '#00ffff';
     ctx.font = '12px "JetBrains Mono", monospace';
     ctx.textAlign = 'center';
@@ -172,60 +131,81 @@ export default function useHandGesture() {
   const processGestures = useCallback((landmarks) => {
     const lm8 = landmarks[8];
     const lm4 = landmarks[4];
-    const lm5 = landmarks[5];
-    const lm9 = landmarks[9];
-    const lm13 = landmarks[13];
-    const lm17 = landmarks[17];
-    const lm12 = landmarks[12];
-    const lm16 = landmarks[16];
-    const lm20 = landmarks[20];
-
-    if (!lm8 || !lm9) return 'None';
+    if (!lm8 || !lm4) return 'None';
 
     const now = Date.now();
 
-    // Track position in history
-    historyRef.current.push({ x: lm9.x, y: lm9.y, t: now });
-    historyRef.current = historyRef.current.filter(p => now - p.t < 500);
-
-    // Position Custom Cursor
+    // Update Custom Cursor coordinates (landmark 8)
     if (window.__setCursorPos) {
-      // Map mirrored x-coordinate
       const targetX = (1 - lm8.x) * window.innerWidth;
       const targetY = lm8.y * window.innerHeight;
       window.__setCursorPos(targetX, targetY);
     }
 
-    // Distance for pinch check
+    // Distance for pinch check (4 <-> 8)
     const dist = Math.sqrt(Math.pow(lm4.x - lm8.x, 2) + Math.pow(lm4.y - lm8.y, 2));
 
-    // Palm check (Open hand): Index, Middle, Ring, Pinky all extended (tip Y < knuckle Y)
-    // and they should be spread out/not pinching.
-    const isPalm = lm8.y < lm5.y && lm12.y < lm9.y && lm16.y < lm13.y && lm20.y < lm17.y && dist >= 0.06;
-
-    if (isPalm) {
-      scrollVelocityRef.current = 0;
-      historyRef.current = []; // Clear history to prevent lingering wave detections
-      return 'Palm / Stop';
-    }
-
-    // Fist Check: All fingers curled (tips lower than knuckles, meaning tip Y > knuckle Y)
-    const isFist = lm8.y > lm5.y && lm12.y > lm9.y && lm16.y > lm13.y && lm20.y > lm17.y;
-    if (isFist) {
-      if (!fistStartTimeRef.current) {
-        fistStartTimeRef.current = now;
-      } else if (now - fistStartTimeRef.current > 500) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        scrollVelocityRef.current = 0;
-        fistStartTimeRef.current = null;
-      }
-      return 'Fist';
-    } else {
-      fistStartTimeRef.current = null;
-    }
-
-    // Pinch Check: click trigger
+    // 1. Determine raw gesture for current frame
+    let rawGesture = 'STOP';
     if (dist < 0.05) {
+      rawGesture = 'CLICK';
+    } else {
+      const fingers = countFingers(landmarks);
+      if (fingers === 2) {
+        rawGesture = 'SCROLL_DOWN';
+      } else if (fingers === 3) {
+        rawGesture = 'SCROLL_UP';
+      } else if (fingers === 0) {
+        rawGesture = 'TOP';
+      } else {
+        rawGesture = 'STOP';
+      }
+    }
+
+    // 2. Feed raw gesture into circular array buffer (GC optimized)
+    const index = frameCountRef.current % 12;
+    gestureBufferRef.current[index] = rawGesture;
+    frameCountRef.current++;
+
+    // 3. Count buffer frequencies (200ms debounce)
+    const counts = {};
+    for (let i = 0; i < 12; i++) {
+      const val = gestureBufferRef.current[i];
+      counts[val] = (counts[val] || 0) + 1;
+    }
+
+    // 4. Commit gesture if 10/12 match
+    let activeGesture = committedGestureRef.current;
+    const match = Object.keys(counts).find((g) => counts[g] >= 10);
+    if (match) {
+      activeGesture = match;
+      committedGestureRef.current = match;
+    }
+
+    // 5. Execute committed gesture actions
+    if (activeGesture === 'SCROLL_DOWN') {
+      scrollVelocityRef.current = 6;
+      topStartTimeRef.current = null;
+      topTriggeredRef.current = false;
+    } else if (activeGesture === 'SCROLL_UP') {
+      scrollVelocityRef.current = -6;
+      topStartTimeRef.current = null;
+      topTriggeredRef.current = false;
+    } else if (activeGesture === 'TOP') {
+      scrollVelocityRef.current = 0;
+      if (!topStartTimeRef.current && !topTriggeredRef.current) {
+        topStartTimeRef.current = now;
+      } else if (topStartTimeRef.current && !topTriggeredRef.current) {
+        if (now - topStartTimeRef.current >= 500) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          topTriggeredRef.current = true;
+        }
+      }
+    } else if (activeGesture === 'CLICK') {
+      scrollVelocityRef.current = 0;
+      topStartTimeRef.current = null;
+      topTriggeredRef.current = false;
+      
       if (now - lastPinchTimeRef.current > 800) {
         lastPinchTimeRef.current = now;
         const targetX = (1 - lm8.x) * window.innerWidth;
@@ -245,27 +225,15 @@ export default function useHandGesture() {
           }
         }
       }
-      return 'Pinch';
+    } else {
+      // STOP or other fallback
+      scrollVelocityRef.current = 0;
+      topStartTimeRef.current = null;
+      topTriggeredRef.current = false;
     }
 
-    // Analyze history for dynamic scrolling waves
-    const analysis = analyzeHistory(historyRef.current, lm9);
-    if (analysis) {
-      if (analysis.swipeY === -1) {
-        scrollVelocityRef.current = -5; // Scroll Up
-      } else if (analysis.swipeY === 1 || analysis.isHorizontalWave) {
-        scrollVelocityRef.current = 5; // Scroll Down
-      }
-    }
-
-    // Return the corresponding label
-    if (scrollVelocityRef.current < 0) {
-      return 'Scroll Up';
-    } else if (scrollVelocityRef.current > 0) {
-      return 'Scroll Down';
-    }
-
-    return 'Tracking';
+    setGesture(activeGesture);
+    return activeGesture;
   }, []);
 
   const predictLoop = useCallback(() => {
@@ -279,11 +247,17 @@ export default function useHandGesture() {
         if (results && results.landmarks && results.landmarks.length > 0) {
           const landmarks = results.landmarks[0];
           const detectedGesture = processGestures(landmarks);
-          setGesture(detectedGesture);
           drawSkeleton(landmarks, detectedGesture);
         } else {
+          // No hand detected: stop scrolling and reset buffer
           scrollVelocityRef.current = 0;
           setGesture('None');
+          committedGestureRef.current = 'None';
+          gestureBufferRef.current.fill('None');
+          frameCountRef.current = 0;
+          topStartTimeRef.current = null;
+          topTriggeredRef.current = false;
+          
           const canvas = canvasRef.current;
           if (canvas) {
             const ctx = canvas.getContext('2d');
@@ -303,11 +277,18 @@ export default function useHandGesture() {
   const enableGesture = useCallback(async () => {
     if (isActive) return;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: 'user' }
-      });
+      // Detect touch screen or mobile viewport width
+      const isMobile = window.innerWidth < 768 || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+      
+      // Choose low resolution 320x240 for mobile to speed up GPU inference
+      const constraints = isMobile 
+        ? { video: { facingMode: 'user', width: 320, height: 240 } }
+        : { video: { facingMode: 'user', width: 640, height: 480 } };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setIsActive(true);
-      // Wait for React to mount elements, then bind stream
+      
+      // Wait for React DOM mounts, then load source stream
       setTimeout(() => {
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -335,11 +316,15 @@ export default function useHandGesture() {
     }
     setIsActive(false);
     setGesture('None');
+    committedGestureRef.current = 'None';
+    gestureBufferRef.current.fill('None');
+    frameCountRef.current = 0;
     scrollVelocityRef.current = 0;
-    historyRef.current = [];
+    topStartTimeRef.current = null;
+    topTriggeredRef.current = false;
   }, [isActive]);
 
-  // Cleanup on unmount
+  // Cleanup loop on unmount
   useEffect(() => {
     return () => {
       if (requestRef.current) {
