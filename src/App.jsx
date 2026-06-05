@@ -1,86 +1,196 @@
-import React, { useEffect } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useState, useEffect, useRef } from 'react'
 
-// Import background
-import NepalBackground from './components/NepalBackground';
+// Import background & overlays
+import NepalBackground from './components/NepalBackground'
+import GestureOverlay from './components/GestureOverlay'
 
-// Import sections
-import Hero from './sections/Hero';
-import About from './sections/About';
-import Projects from './sections/Projects';
-import Skills from './sections/Skills';
-import Contact from './sections/Contact';
+// Import restored components
+import Navbar from './components/Navbar'
+import Hero from './components/Hero'
+import About from './components/About'
+import Skills from './components/Skills'
+import Projects from './components/Projects'
+import Experience from './components/Experience'
+import Contact from './components/Contact'
+import Footer from './components/Footer'
 
-// Import overlay component
-import GestureOverlay from './components/GestureOverlay';
+// Import hand gesture hook
+import useHandGesture from './hooks/useHandGesture'
 
-// Import gesture hook
-import useHandGesture from './hooks/useHandGesture';
 
-// Register GSAP ScrollTrigger
-gsap.registerPlugin(ScrollTrigger);
-
-export default function App() {
-  const gestureState = useHandGesture();
+/* ═══════════════════════════════════════════════════════
+   CUSTOM CURSOR — Supporting both Mouse & Gesture inputs
+   ═══════════════════════════════════════════════════════ */
+function CustomCursor() {
+  const cursorRef = useRef(null)
+  const dotRef = useRef(null)
+  const pos = useRef({ x: 0, y: 0 })
+  const cursorPos = useRef({ x: 0, y: 0 })
 
   useEffect(() => {
-    // 1. Title reveal animation (clip-path)
-    const clipReveals = document.querySelectorAll('.clip-reveal');
-    clipReveals.forEach((el) => {
-      ScrollTrigger.create({
-        trigger: el,
-        start: 'top 85%',
-        onEnter: () => el.classList.add('visible'),
-        toggleActions: 'play none none none'
-      });
-    });
+    // Mouse movement updates cursor
+    const handleMove = (e) => {
+      pos.current = { x: e.clientX, y: e.clientY }
+      if (dotRef.current) {
+        dotRef.current.style.left = `${e.clientX}px`
+        dotRef.current.style.top = `${e.clientY}px`
+      }
+    }
 
-    // 2. Project rows entrance animation
-    const projectRows = document.querySelectorAll('.project-line');
-    projectRows.forEach((row) => {
-      gsap.fromTo(
-        row,
-        {
-          y: 40,
-          opacity: 0
-        },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.8,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: row,
-            start: 'top 90%',
-            toggleActions: 'play none none none'
-          }
-        }
-      );
-    });
+    // Set cursor hover state classes on interactive elements
+    const handleOver = (e) => {
+      if (e.target.closest('button, a, .carousel-card, .glass-card, .nav-link, .nav-cta, .nav-logo, input, textarea, .project-card, .tool-card')) {
+        if (cursorRef.current) cursorRef.current.classList.add('hovering')
+      }
+    }
 
-    // Cleanup ScrollTriggers on unmount
+    const handleOut = () => {
+      if (cursorRef.current) cursorRef.current.classList.remove('hovering')
+    }
+
+    // Connect hand gesture tracking positions to custom cursor
+    window.__setCursorPos = (x, y) => {
+      pos.current = { x, y }
+      if (dotRef.current) {
+        dotRef.current.style.left = `${x}px`
+        dotRef.current.style.top = `${y}px`
+      }
+    }
+
+    // Smooth cursor follow delay animation loop
+    const animate = () => {
+      cursorPos.current.x += (pos.current.x - cursorPos.current.x) * 0.12
+      cursorPos.current.y += (pos.current.y - cursorPos.current.y) * 0.12
+      if (cursorRef.current) {
+        cursorRef.current.style.left = `${cursorPos.current.x}px`
+        cursorRef.current.style.top = `${cursorPos.current.y}px`
+      }
+      requestAnimationFrame(animate)
+    }
+
+    window.addEventListener('mousemove', handleMove, { passive: true })
+    document.addEventListener('mouseover', handleOver, { passive: true })
+    document.addEventListener('mouseout', handleOut, { passive: true })
+    const animationFrame = requestAnimationFrame(animate)
+
     return () => {
-      ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
-    };
-  }, []);
+      window.removeEventListener('mousemove', handleMove)
+      document.removeEventListener('mouseover', handleOver)
+      document.removeEventListener('mouseout', handleOut)
+      cancelAnimationFrame(animationFrame)
+      window.__setCursorPos = null
+    }
+  }, [])
 
   return (
-    <div style={{ position: 'relative' }} className="w-full min-h-screen bg-[#06060f] text-[#f0ece4] select-none">
-      {/* fixed, z-index 0 */}
+    <>
+      <div ref={cursorRef} className="custom-cursor" />
+      <div ref={dotRef} className="cursor-dot" />
+    </>
+  )
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   SCROLL & NAVIGATION TRACKING HOOKS
+   ═══════════════════════════════════════════════════════ */
+function useScrollReveal() {
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) entry.target.classList.add('visible')
+        })
+      },
+      { threshold: 0.08, rootMargin: '0px 0px -20px 0px' }
+    )
+    document
+      .querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale')
+      .forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [])
+}
+
+function useActiveSection() {
+  const [active, setActive] = useState('home')
+  useEffect(() => {
+    const sections = document.querySelectorAll('.section, .hero')
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActive(entry.target.id || 'home')
+        })
+      },
+      { threshold: 0.3 }
+    )
+    sections.forEach((s) => observer.observe(s))
+    return () => observer.disconnect()
+  }, [])
+  return active
+}
+
+function useScrollProgress() {
+  const [progress, setProgress] = useState(0)
+  useEffect(() => {
+    const onScroll = () => {
+      const scrollTop = window.scrollY
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight
+      setProgress(docHeight > 0 ? (scrollTop / docHeight) * 100 : 0)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+  return progress
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   MAIN APP
+   ═══════════════════════════════════════════════════════ */
+export default function App() {
+  const activeSection = useActiveSection()
+  useScrollReveal()
+  const scrollProgress = useScrollProgress()
+  const gestureState = useHandGesture()
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale').forEach((el) => {
+        const rect = el.getBoundingClientRect()
+        if (rect.top < window.innerHeight) el.classList.add('visible')
+      })
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
+
+  return (
+    <>
+      {/* Custom cursor — desktop only */}
+      {typeof window !== 'undefined' && !('ontouchstart' in window) && <CustomCursor />}
+
+      {/* Layer 1: Nepal Video Background & twinkling star canvas overlay */}
       <NepalBackground />
-      
-      {/* position:relative, z-index:1 */}
-      <main style={{ position: 'relative', zIndex: 1 }} className="w-full flex flex-col">
-        <Hero />
+
+      {/* Scroll Progress bar */}
+      <div className="scroll-progress" style={{ width: `${scrollProgress}%` }} />
+
+      <Navbar activeSection={activeSection} />
+
+      {/* Hero is OUTSIDE any transform wrapper so preserve-3d carousel works */}
+      <Hero />
+
+      <main>
         <About />
-        <Projects />
         <Skills />
+        <Projects />
+        <Experience />
         <Contact />
       </main>
 
-      {/* fixed, z-index 9000 */}
+      <Footer />
+
+      {/* Hand Gesture controller overlays */}
       <GestureOverlay gestureState={gestureState} />
-    </div>
-  );
+    </>
+  )
 }
