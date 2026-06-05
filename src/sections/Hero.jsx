@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import gsap from 'gsap';
 
 function ScrambleText({ targetText, duration = 1800, intervalSpeed = 40 }) {
   const [displayText, setDisplayText] = useState('');
@@ -42,8 +43,26 @@ function ScrambleText({ targetText, duration = 1800, intervalSpeed = 40 }) {
 }
 
 export default function Hero() {
+  useEffect(() => {
+    // Stagger animate AALOK & NIROULA on page load
+    gsap.fromTo(
+      '.hero-word',
+      {
+        opacity: 0,
+        y: 60
+      },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        stagger: 0.15,
+        ease: 'power3.out'
+      }
+    );
+  }, []);
+
   return (
-    <section className="relative w-full min-height-screen h-screen overflow-hidden" id="hero">
+    <section className="relative w-full h-screen overflow-hidden" id="hero">
       <style>{`
         @keyframes scroll-dot {
           0% { top: 0%; opacity: 0; }
@@ -54,47 +73,49 @@ export default function Hero() {
       `}</style>
 
       {/* Main Title Block */}
-      <div className="absolute left-8 top-[18vh] select-none z-10">
+      <div className="absolute left-8 top-[20vh] select-none z-10">
         <h1 
-          className="font-black tracking-tight text-[#f0ece4] leading-none"
+          className="hero-word font-black tracking-tight text-[#f0ece4] leading-none"
           style={{
             fontSize: 'clamp(80px, 13vw, 180px)',
             transform: 'rotate(-2deg)',
-            transformOrigin: 'left center'
+            transformOrigin: 'left center',
+            display: 'block'
           }}
         >
           AALOK
         </h1>
         <span 
-          className="text-outline font-black tracking-tight leading-none block"
+          className="hero-word text-outline font-black tracking-tight leading-none block"
           style={{
             fontSize: 'clamp(80px, 13vw, 180px)',
-            marginTop: '-0.15em'
+            marginTop: '-0.15em',
+            display: 'block'
           }}
         >
           NIROULA
         </span>
       </div>
 
-      {/* Bio text block */}
+      {/* Bio text block: position absolute right 5vw, top 35vh, width 35% */}
       <div 
-        className="absolute right-[4vw] top-[35vh] w-[90%] md:w-[38%] text-left z-10"
+        className="absolute right-[5vw] top-[35vh] w-[90%] md:w-[35%] text-left z-10"
         style={{
           fontFamily: 'Inter, sans-serif',
           fontWeight: 300,
           fontSize: '15px',
           lineHeight: '1.7',
-          color: 'rgba(240, 236, 228, 0.5)'
+          color: '#f0ece470'
         }}
       >
-        Frontend developer & creative designer based in Kathmandu. BCS student at IIMS, interning at Multichoice Media. Building things that don't look like templates.
+        Frontend developer & creative designer from Kathmandu. BCS student at IIMS. Interning at Multichoice Media. Building things that don't look like templates.
       </div>
 
-      {/* Scroll indicator */}
+      {/* Scroll indicator: thin 1px line 70px tall, bottom-left, inner 4px dot slides down infinite 2s */}
       <div className="absolute bottom-24 left-8 flex flex-col items-start z-10">
         <div className="relative w-[1px] h-[70px] bg-[#f0ece420] overflow-hidden">
           <div 
-            className="absolute w-[3px] h-[3px] bg-[#f0ece4] rounded-full left-0"
+            className="absolute w-[4px] h-[4px] bg-[#f0ece4] rounded-full -left-[1.5px]"
             style={{
               animation: 'scroll-dot 2s ease-in-out infinite'
             }}

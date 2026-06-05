@@ -87,3 +87,21 @@ a, button, input, textarea, select, [role="button"] {
   transform: translate(-50%, -50%);
   transition: border-color 0.2s, width 0.3s, height 0.3s, filter 0.3s;
 }
+
+/* Background system and readability overlay adjustments */
+section {
+  position: relative;
+  z-index: 1;
+  background-color: rgba(6, 6, 15, 0.75) !important;
+  backdrop-filter: blur(0px);
+}
+
+#hero {
+  background-color: transparent !important;
+}
+
+#hero h1, 
+#hero span, 
+#hero div {
+  text-shadow: 0 0 40px rgba(6, 6, 15, 0.8) !important;
+}

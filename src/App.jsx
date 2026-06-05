@@ -2,6 +2,9 @@ import React, { useEffect } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
+// Import background
+import NepalBackground from './components/NepalBackground';
+
 // Import sections
 import Hero from './sections/Hero';
 import About from './sections/About';
@@ -12,10 +15,15 @@ import Contact from './sections/Contact';
 // Import overlay component
 import GestureOverlay from './components/GestureOverlay';
 
+// Import gesture hook
+import useHandGesture from './hooks/useHandGesture';
+
 // Register GSAP ScrollTrigger
 gsap.registerPlugin(ScrollTrigger);
 
 export default function App() {
+  const gestureState = useHandGesture();
+
   useEffect(() => {
     // 1. Title reveal animation (clip-path)
     const clipReveals = document.querySelectorAll('.clip-reveal');
@@ -58,8 +66,12 @@ export default function App() {
   }, []);
 
   return (
-    <div className="relative w-full min-h-screen bg-[#06060f] text-[#f0ece4] select-none">
-      <main className="w-full flex flex-col">
+    <div style={{ position: 'relative' }} className="w-full min-h-screen bg-[#06060f] text-[#f0ece4] select-none">
+      {/* fixed, z-index 0 */}
+      <NepalBackground isGestureActive={gestureState.isActive} />
+      
+      {/* position:relative, z-index:1 */}
+      <main style={{ position: 'relative', zIndex: 1 }} className="w-full flex flex-col">
         <Hero />
         <About />
         <Projects />
@@ -67,8 +79,8 @@ export default function App() {
         <Contact />
       </main>
 
-      {/* Gesture overlay system */}
-      <GestureOverlay />
+      {/* fixed, z-index 9000 */}
+      <GestureOverlay gestureState={gestureState} />
     </div>
   );
 }

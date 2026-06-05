@@ -1,7 +1,7 @@
 import React from 'react';
 import useHandGesture from '../hooks/useHandGesture';
 
-export default function GestureOverlay() {
+export default function GestureOverlay({ gestureState }) {
   const {
     isActive,
     gesture,
@@ -9,7 +9,7 @@ export default function GestureOverlay() {
     disableGesture,
     videoRef,
     canvasRef
-  } = useHandGesture();
+  } = gestureState;
 
   const handleToggle = () => {
     if (isActive) {

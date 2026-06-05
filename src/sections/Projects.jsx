@@ -2,14 +2,14 @@ import React from 'react';
 
 const PROJECTS = [
   { id:"01", name:"KFX Movies", stack:"Next.js · Node.js · Prisma · Supabase", desc:"Cyberpunk film platform. 25 pages, JWT auth, Cloudinary.", url:"https://kfxmovies.com" },
-  { id:"02", name:"Fiverr Guard Pro", stack:"Chrome Extension · JS · ML", desc:"Scam detector for Fiverr. 1,000+ active users.", url:"https://github.com/Rawanraaj" },
+  { id:"02", name:"Fiverr Guard Pro", stack:"Chrome Extension · JS · ML", desc:"Scam detector for Fiverr. 1,000+ active users.", url:"https://github.com/Rawanraaj/Fiverr-Guard-Pro" },
   { id:"03", name:"Climate Viz", stack:"Python · Plotly · NumPy", desc:"577K+ records. Global warming choropleth maps.", url:"https://github.com/Rawanraaj" },
   { id:"04", name:"Khalipana.com", stack:"WordPress · PHP · Custom CSS", desc:"Job portal. Live in production at Multichoice Media.", url:"https://khalipana.com" }
 ];
 
 export default function Projects() {
   return (
-    <section id="projects" className="w-full py-20 px-[6vw] overflow-hidden">
+    <section id="projects" className="w-full py-20 px-[6vw] overflow-hidden" style={{ backgroundColor: 'rgba(6, 6, 15, 0.75)' }}>
       <h2 
         className="clip-reveal font-mono text-[11px] tracking-[0.3em] text-[#f0ece430] mb-12 uppercase"
         style={{ fontFamily: '"JetBrains Mono", monospace' }}
@@ -25,12 +25,13 @@ export default function Projects() {
             href={proj.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="project-line group flex items-center justify-between py-6 border-t border-[#f0ece410]"
+            className="project-line group flex items-center justify-between py-6 border-t border-[#f0ece410] transition-colors duration-300 hover:bg-[#f0ece403]"
             style={{ cursor: 'none' }}
           >
             <div className="flex items-baseline gap-6">
+              {/* Project index animates from #f0ece410 to #f0ece460 on row hover */}
               <span 
-                className="font-mono text-[11px] text-[#f0ece430]"
+                className="font-mono text-[11px] text-[#f0ece410] transition-colors duration-300 group-hover:text-[#f0ece460]"
                 style={{ fontFamily: '"JetBrains Mono", monospace' }}
               >
                 {proj.id}
@@ -52,8 +53,23 @@ export default function Projects() {
                   {proj.desc}
                 </span>
               </div>
-              <span className="text-[#f0ece430] text-[20px] transition-transform duration-300 group-hover:translate-x-2">
-                →
+              {/* Arrow slides 8px right with CSS transition */}
+              <span 
+                className="text-[#f0ece430] text-[20px] transition-transform duration-300"
+                style={{ transform: 'translateX(0px)', transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
+                ref={(el) => {
+                  if (el) {
+                    el.style.transform = ''; // let class handle it, or use hover selector in stylesheet. We'll add custom style rule.
+                  }
+                }}
+              >
+                <style>{`
+                  .project-line:hover .arrow-slide {
+                    transform: translateX(8px) !important;
+                    color: #00ffff !important;
+                  }
+                `}</style>
+                <span className="arrow-slide inline-block transition-transform duration-300">→</span>
               </span>
             </div>
           </a>
@@ -68,7 +84,7 @@ export default function Projects() {
             href={proj.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="snap-center shrink-0 w-[80vw] border border-[#f0ece410] p-6 flex flex-col justify-between h-[220px]"
+            className="snap-center shrink-0 w-[80vw] border border-[#f0ece410] bg-[#06060f]/60 p-6 flex flex-col justify-between h-[220px]"
             style={{ cursor: 'none' }}
           >
             <div>

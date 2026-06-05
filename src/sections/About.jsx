@@ -1,18 +1,43 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 export default function About() {
+  useEffect(() => {
+    // ScrollTrigger reveal for right column
+    gsap.fromTo(
+      '.about-right-col',
+      {
+        opacity: 0,
+        y: 30
+      },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 1.0,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: '.about-right-col',
+          start: 'top 85%',
+          toggleActions: 'play none none none'
+        }
+      }
+    );
+  }, []);
+
   return (
     <section 
       id="about" 
       className="w-full overflow-hidden"
       style={{
-        padding: '15vh 6vw'
+        padding: '15vh 6vw',
+        backgroundColor: 'rgba(6, 6, 15, 0.8)'
       }}
     >
       <div 
         className="grid gap-[6vw]"
         style={{
-          gridTemplateColumns: 'minmax(80px, 30%) 1fr'
+          gridTemplateColumns: '35% 65%'
         }}
       >
         {/* Left Column (Sticky rotated label) */}
@@ -32,7 +57,7 @@ export default function About() {
         </div>
 
         {/* Right Column (Content copy & Stats block) */}
-        <div className="flex flex-col gap-12">
+        <div className="about-right-col flex flex-col gap-12">
           <p 
             style={{
               fontFamily: 'Inter, sans-serif',
