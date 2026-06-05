@@ -125,7 +125,7 @@ export default function Projects() {
     setShowKfxToast(true)
     setTimeout(() => {
       setShowKfxToast(false)
-      window.open('https://kfxmovies.com', '_blank')
+      window.location.href = 'https://kfxmovies.com/'
     }, 2000)
   }
 
@@ -177,11 +177,11 @@ export default function Projects() {
         </div>
       )}
 
-      {/* KFX Welcome Toast Banner at top */}
+      {/* KFX Welcome Toast Banner at bottom */}
       {showKfxToast && (
         <div style={{
           position: 'fixed',
-          top: '32px',
+          bottom: '32px',
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 1000005,
@@ -194,7 +194,7 @@ export default function Projects() {
           alignItems: 'center',
           gap: '12px',
           boxShadow: '0 20px 50px rgba(0,0,0,0.7), 0 0 25px rgba(0, 255, 255, 0.25)',
-          animation: 'kfxToastSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+          animation: 'kfxToastSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         }}>
           <span style={{ fontSize: '1.4rem' }}>🎬</span>
           <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#00ffff', fontFamily: 'Inter, sans-serif', letterSpacing: '0.5px' }}>
@@ -208,8 +208,8 @@ export default function Projects() {
           from { opacity: 0; transform: translateX(-50%) translateY(20px); }
           to   { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
-        @keyframes kfxToastSlideDown {
-          from { opacity: 0; transform: translateX(-50%) translateY(-30px); }
+        @keyframes kfxToastSlideUp {
+          from { opacity: 0; transform: translateX(-50%) translateY(20px); }
           to   { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
       `}</style>
