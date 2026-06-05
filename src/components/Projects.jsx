@@ -7,8 +7,8 @@ const projects = [
     description:
       'Building a modern website for KFX Studios with responsive layouts, clean UI sections, and professional design.',
     technologies: ['HTML', 'CSS', 'JavaScript'],
-    status: 'ongoing',
-    link: '#',
+    status: 'live',
+    link: 'https://kfxmovies.com/',
     image: "/kfxstudio.png",
   },
   {
@@ -50,11 +50,12 @@ function useTilt(ref) {
   return { onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave }
 }
 
-function ProjectCard({ project, index, onDevClick }) {
+function ProjectCard({ project, index, onDevClick, onKfxClick }) {
   const cardRef = useRef(null)
   const tiltHandlers = useTilt(cardRef)
 
   const isDev = project.status === 'ongoing' || project.link === '#'
+  const isKfx = project.title === 'KFX Studios Website'
 
   return (
     <div
@@ -99,6 +100,7 @@ function ProjectCard({ project, index, onDevClick }) {
             target="_blank"
             rel="noopener noreferrer"
             className="project-link"
+            onClick={isKfx ? (e) => { e.preventDefault(); onKfxClick(); } : undefined}
           >
             View Project
             <span className="material-symbols-outlined">arrow_forward</span>
@@ -111,11 +113,20 @@ function ProjectCard({ project, index, onDevClick }) {
 
 export default function Projects() {
   const [showToast, setShowToast] = useState(false)
+  const [showKfxToast, setShowKfxToast] = useState(false)
 
   const handleDevClick = (e) => {
     e.preventDefault()
     setShowToast(true)
     setTimeout(() => setShowToast(false), 3000)
+  }
+
+  const handleKfxClick = () => {
+    setShowKfxToast(true)
+    setTimeout(() => {
+      setShowKfxToast(false)
+      window.open('https://kfxmovies.com', '_blank')
+    }, 2000)
   }
 
   return (
@@ -133,7 +144,7 @@ export default function Projects() {
 
         <div className="projects-grid">
           {projects.map((project, i) => (
-            <ProjectCard key={project.title} project={project} index={i} onDevClick={handleDevClick} />
+            <ProjectCard key={project.title} project={project} index={i} onDevClick={handleDevClick} onKfxClick={handleKfxClick} />
           ))}
         </div>
       </div>
@@ -166,9 +177,39 @@ export default function Projects() {
         </div>
       )}
 
+      {/* KFX Welcome Toast Banner at top */}
+      {showKfxToast && (
+        <div style={{
+          position: 'fixed',
+          top: '32px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000005,
+          padding: '16px 32px',
+          background: 'rgba(6, 6, 15, 0.96)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid #00ffff',
+          borderRadius: '50px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.7), 0 0 25px rgba(0, 255, 255, 0.25)',
+          animation: 'kfxToastSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}>
+          <span style={{ fontSize: '1.4rem' }}>🎬</span>
+          <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#00ffff', fontFamily: 'Inter, sans-serif', letterSpacing: '0.5px' }}>
+            Welcome to KFX! Redirecting to kfxmovies.com...
+          </span>
+        </div>
+      )}
+
       <style>{`
         @keyframes toastSlideUp {
           from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        @keyframes kfxToastSlideDown {
+          from { opacity: 0; transform: translateX(-50%) translateY(-30px); }
           to   { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
       `}</style>
