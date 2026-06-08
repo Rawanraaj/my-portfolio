@@ -6,33 +6,33 @@
    ═══════════════════════════════════════════════════════ */
 
 :root {
-  --bg-void:        #06060f;
-  --bg-deep:        #0a0a1a;
-  --bg-surface:     #0f0f24;
-  --bg-elevated:    #161638;
-  --bg-glass:       rgba(15, 15, 36, 0.6);
+  --bg-void:        #080810;
+  --bg-deep:        #0b0b18;
+  --bg-surface:     #10101f;
+  --bg-elevated:    #18182e;
+  --bg-glass:       rgba(12, 12, 28, 0.65);
   --bg-glass-light: rgba(255, 255, 255, 0.03);
 
-  --accent-violet:     #8b5cf6;
-  --accent-blue:       #3b82f6;
-  --accent-pink:       #ec4899;
-  --accent-amber:      #f59e0b;
+  --accent-violet:     #00d2ff;
+  --accent-blue:       #0099cc;
+  --accent-pink:       #ffaa3c;
+  --accent-amber:      #ffaa3c;
   --accent-emerald:    #10b981;
-  --accent-rose:       #f43f5e;
+  --accent-rose:       #ff6b6b;
 
-  --glow-violet:    rgba(139, 92, 246, 0.15);
-  --glow-blue:      rgba(59, 130, 246, 0.15);
-  --glow-pink:      rgba(236, 72, 153, 0.15);
-  --glow-amber:     rgba(245, 158, 11, 0.15);
+  --glow-violet:    rgba(0, 210, 255, 0.15);
+  --glow-blue:      rgba(0, 153, 204, 0.15);
+  --glow-pink:      rgba(255, 170, 60, 0.15);
+  --glow-amber:     rgba(255, 170, 60, 0.15);
 
-  --text-white:     #f1f0f5;
-  --text-light:     #c4c1d4;
-  --text-muted:     #7a7498;
-  --text-dim:       #4a4568;
+  --text-white:     #f0ece4;
+  --text-light:     #c8c4b8;
+  --text-muted:     #807c70;
+  --text-dim:       #504c44;
 
-  --border-subtle:  rgba(139, 92, 246, 0.08);
-  --border-glow:    rgba(139, 92, 246, 0.2);
-  --border-active:  rgba(139, 92, 246, 0.5);
+  --border-subtle:  rgba(0, 210, 255, 0.08);
+  --border-glow:    rgba(0, 210, 255, 0.2);
+  --border-active:  rgba(0, 210, 255, 0.5);
 
   --font-heading:   'Space Grotesk', system-ui, sans-serif;
   --font-body:      'Inter', system-ui, sans-serif;

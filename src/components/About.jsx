@@ -75,22 +75,32 @@ export default function About() {
         <div className="about-layout">
           <div className="about-visual reveal-left">
             <div className="about-avatar">
-              <div className="about-avatar-inner">
-                <span className="material-symbols-outlined">person</span>
+              <div className="about-avatar-inner" style={{ overflow: 'hidden', padding: 0 }}>
+                <img
+                  src="/profile.jpg"
+                  alt="Rawan Raj"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: '50%',
+                    display: 'block'
+                  }}
+                />
               </div>
               <OrbitRing
                 size={300}
                 speed={0.5}
-                color="rgba(139, 92, 246, 0.15)"
-                dotColor="#8b5cf6"
+                color="rgba(0, 210, 255, 0.15)"
+                dotColor="#00d2ff"
                 dotSize={8}
                 reverse={false}
               />
               <OrbitRing
                 size={340}
                 speed={0.3}
-                color="rgba(236, 72, 153, 0.1)"
-                dotColor="#ec4899"
+                color="rgba(255, 170, 60, 0.1)"
+                dotColor="#ffaa3c"
                 dotSize={6}
                 reverse={true}
               />
