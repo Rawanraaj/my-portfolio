@@ -215,11 +215,11 @@ export default function useHandGesture() {
 
     // 5. Execute committed gesture actions
     if (activeGesture === 'SCROLL_DOWN') {
-      scrollVelocityRef.current = 6;
+      scrollVelocityRef.current += (4 - scrollVelocityRef.current) * 0.12;
       topStartTimeRef.current = null;
       topTriggeredRef.current = false;
     } else if (activeGesture === 'SCROLL_UP') {
-      scrollVelocityRef.current = -6;
+      scrollVelocityRef.current += (-4 - scrollVelocityRef.current) * 0.12;
       topStartTimeRef.current = null;
       topTriggeredRef.current = false;
     } else if (activeGesture === 'TOP') {
@@ -298,8 +298,11 @@ export default function useHandGesture() {
       }
     }
 
-    if (scrollVelocityRef.current !== 0) {
-      window.scrollBy(0, scrollVelocityRef.current);
+    // Smooth scroll with deceleration
+    if (Math.abs(scrollVelocityRef.current) > 0.1) {
+      window.scrollBy({ top: scrollVelocityRef.current, left: 0 });
+    } else {
+      scrollVelocityRef.current = 0;
     }
 
     requestRef.current = requestAnimationFrame(predictLoop);
