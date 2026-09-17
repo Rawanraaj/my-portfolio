@@ -10,6 +10,7 @@ import Hero from './components/Hero'
 import About from './components/About'
 import Skills from './components/Skills'
 import Projects from './components/Projects'
+import LiveDemo from './components/LiveDemo'
 import Experience from './components/Experience'
 import Contact from './components/Contact'
 import Footer from './components/Footer'
@@ -159,6 +160,17 @@ export default function App() {
     return () => clearTimeout(timer)
   }, [])
 
+  // Auto-scroll to demo if accessed via /demo or #demo
+  useEffect(() => {
+    if (window.location.pathname === '/demo' || window.location.hash === '#demo') {
+      const timer = setTimeout(() => {
+        const el = document.getElementById('demo')
+        if (el) el.scrollIntoView({ behavior: 'smooth' })
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [])
+
   return (
     <div style={{ position: 'relative' }}>
       {/* Custom cursor — desktop only */}
@@ -179,6 +191,7 @@ export default function App() {
         <About />
         <Skills />
         <Projects />
+        <LiveDemo />
         <Experience />
         <Contact />
       </main>
