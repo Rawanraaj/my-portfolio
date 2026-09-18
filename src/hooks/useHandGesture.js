@@ -42,11 +42,16 @@ const countFingers = (landmarks) => {
 export default function useHandGesture() {
   const [isActive, setIsActive] = useState(false);
   const [gesture, setGesture] = useState('None');
+  const [isModelReady, setIsModelReady] = useState(false);
+  const [error, setError] = useState(null);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const streamRef = useRef(null);
   const handLandmarkerRef = useRef(null);
   const requestRef = useRef(null);
-  const lastVideoTimeRef = useRef(-1);
+  const lastVideoTimeRef = useRef(0);
+  const lastVideoCurrentTimeRef = useRef(-1);
   
   // Timing / gesture tracking variables
   const lastPinchTimeRef = useRef(0);
@@ -60,27 +65,44 @@ export default function useHandGesture() {
   const frameCountRef = useRef(0);
   const committedGestureRef = useRef('None');
 
-  // Initialize HandLandmarker on mount
+  // Initialize HandLandmarker on mount (pinned to matching tasks-vision version 0.10.35, with CPU fallback)
   useEffect(() => {
     let isMounted = true;
     async function initLandmarker() {
       try {
         const vision = await FilesetResolver.forVisionTasks(
-          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
         );
-        const landmarker = await HandLandmarker.createFromOptions(vision, {
-          numHands: 1,
-          runningMode: 'VIDEO',
-          baseOptions: {
-            delegate: 'GPU',
-            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
-          }
-        });
-        if (isMounted) {
+        let landmarker = null;
+        try {
+          landmarker = await HandLandmarker.createFromOptions(vision, {
+            numHands: 1,
+            runningMode: 'VIDEO',
+            baseOptions: {
+              delegate: 'GPU',
+              modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
+            }
+          });
+        } catch (gpuErr) {
+          console.warn('GPU delegate failed for HandLandmarker, falling back to CPU:', gpuErr);
+          landmarker = await HandLandmarker.createFromOptions(vision, {
+            numHands: 1,
+            runningMode: 'VIDEO',
+            baseOptions: {
+              delegate: 'CPU',
+              modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'
+            }
+          });
+        }
+        if (isMounted && landmarker) {
           handLandmarkerRef.current = landmarker;
+          setIsModelReady(true);
         }
       } catch (err) {
         console.error('Failed to load HandLandmarker:', err);
+        if (isMounted) {
+          setError('Failed to load hand tracking model.');
+        }
       }
     }
     initLandmarker();
@@ -95,8 +117,8 @@ export default function useHandGesture() {
     if (!canvas || !video) return;
 
     const ctx = canvas.getContext('2d');
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
+    const videoWidth = video.videoWidth || 320;
+    const videoHeight = video.videoHeight || 240;
 
     if (canvas.width !== videoWidth || canvas.height !== videoHeight) {
       canvas.width = videoWidth;
@@ -270,37 +292,47 @@ export default function useHandGesture() {
   const predictLoop = useCallback(() => {
     const video = videoRef.current;
     const landmarker = handLandmarkerRef.current;
-    if (video && landmarker && video.readyState >= 2) {
-      const timestamp = performance.now();
-      if (video.currentTime !== lastVideoTimeRef.current) {
-        lastVideoTimeRef.current = video.currentTime;
-        const results = landmarker.detectForVideo(video, timestamp);
-        if (results && results.landmarks && results.landmarks.length > 0) {
-          const landmarks = results.landmarks[0];
-          const detectedGesture = processGestures(landmarks);
-          drawSkeleton(landmarks, detectedGesture);
-        } else {
-          // No hand detected: stop scrolling and reset buffer
-          scrollVelocityRef.current = 0;
-          setGesture('None');
-          committedGestureRef.current = 'None';
-          gestureBufferRef.current.fill('None');
-          frameCountRef.current = 0;
-          topStartTimeRef.current = null;
-          topTriggeredRef.current = false;
-          
-          const canvas = canvasRef.current;
-          if (canvas) {
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (video && landmarker && video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+      const now = performance.now();
+      // Ensure strictly monotonically increasing timestamp for MediaPipe
+      const timestamp = Math.max(now, lastVideoTimeRef.current + 1);
+      
+      if (video.currentTime !== lastVideoCurrentTimeRef.current) {
+        lastVideoCurrentTimeRef.current = video.currentTime;
+        lastVideoTimeRef.current = timestamp;
+        
+        try {
+          const results = landmarker.detectForVideo(video, timestamp);
+          if (results && results.landmarks && results.landmarks.length > 0) {
+            const landmarks = results.landmarks[0];
+            const detectedGesture = processGestures(landmarks);
+            drawSkeleton(landmarks, detectedGesture);
+          } else {
+            // No hand detected: stop scrolling and reset buffer
+            scrollVelocityRef.current = 0;
+            setGesture('None');
+            committedGestureRef.current = 'None';
+            gestureBufferRef.current.fill('None');
+            frameCountRef.current = 0;
+            topStartTimeRef.current = null;
+            topTriggeredRef.current = false;
+            
+            const canvas = canvasRef.current;
+            if (canvas) {
+              const ctx = canvas.getContext('2d');
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
           }
+        } catch (detErr) {
+          console.warn('detectForVideo frame error:', detErr);
         }
       }
     }
 
-    // Smooth scroll with deceleration
+    // Smooth scroll with instant behavior to prevent fighting CSS scroll-behavior: smooth
     if (Math.abs(scrollVelocityRef.current) > 0.1) {
-      window.scrollBy({ top: scrollVelocityRef.current, left: 0 });
+      window.scrollBy({ top: scrollVelocityRef.current, left: 0, behavior: 'instant' });
     } else {
       scrollVelocityRef.current = 0;
     }
@@ -308,44 +340,88 @@ export default function useHandGesture() {
     requestRef.current = requestAnimationFrame(predictLoop);
   }, [processGestures, drawSkeleton]);
 
-  const enableGesture = useCallback(async () => {
-    if (isActive) return;
-    try {
-      // Detect touch screen or mobile viewport width
-      const isMobile = window.innerWidth < 768 || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
-      
-      // Choose low resolution 320x240 for mobile to speed up GPU inference
-      const constraints = isMobile 
-        ? { video: { facingMode: 'user', width: 320, height: 240 } }
-        : { video: { facingMode: 'user', width: 640, height: 480 } };
+  // Robustly bind the camera stream when isActive and video element are both ready
+  useEffect(() => {
+    if (isActive && streamRef.current && videoRef.current) {
+      const video = videoRef.current;
+      video.srcObject = streamRef.current;
+      video.setAttribute('playsinline', '');
+      video.setAttribute('muted', '');
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      setIsActive(true);
-      
-      // Wait for React DOM mounts, then load source stream
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current.play();
+      let playStarted = false;
+      const startPlayback = () => {
+        if (playStarted) return;
+        playStarted = true;
+        video.play().then(() => {
+          if (!requestRef.current) {
             requestRef.current = requestAnimationFrame(predictLoop);
-          };
-        }
-      }, 100);
-    } catch (err) {
-      console.error('Camera permissions or startup failed:', err);
+          }
+        }).catch((err) => {
+          console.warn('video.play() was interrupted or rejected:', err);
+        });
+      };
+
+      if (video.readyState >= 1) {
+        startPlayback();
+      } else {
+        video.onloadedmetadata = startPlayback;
+        video.onloadeddata = startPlayback;
+      }
     }
   }, [isActive, predictLoop]);
 
+  const enableGesture = useCallback(async () => {
+    if (isActive) return;
+    setError(null);
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setError('Camera access is not supported in this browser or over insecure HTTP.');
+      return;
+    }
+
+    try {
+      const isMobile = window.innerWidth < 768 || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+      
+      const constraints = {
+        video: {
+          facingMode: 'user',
+          width: { ideal: isMobile ? 320 : 640 },
+          height: { ideal: isMobile ? 240 : 480 }
+        }
+      };
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (constraintErr) {
+        console.warn('Specific camera constraints failed, attempting fallback to generic video:', constraintErr);
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
+
+      streamRef.current = stream;
+      setIsActive(true);
+    } catch (err) {
+      console.error('Camera permissions or startup failed:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setError('Camera permission denied. Please allow camera access in browser settings.');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setError('No camera found on this device.');
+      } else {
+        setError(`Camera error: ${err.message || err.name || 'Unable to start camera'}`);
+      }
+    }
+  }, [isActive]);
+
   const disableGesture = useCallback(() => {
-    if (!isActive) return;
     if (requestRef.current) {
       cancelAnimationFrame(requestRef.current);
       requestRef.current = null;
     }
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach(track => track.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
     setIsActive(false);
@@ -356,7 +432,8 @@ export default function useHandGesture() {
     scrollVelocityRef.current = 0;
     topStartTimeRef.current = null;
     topTriggeredRef.current = false;
-  }, [isActive]);
+    setError(null);
+  }, []);
 
   // Cleanup loop on unmount
   useEffect(() => {
@@ -364,12 +441,17 @@ export default function useHandGesture() {
       if (requestRef.current) {
         cancelAnimationFrame(requestRef.current);
       }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
     };
   }, []);
 
   return {
     isActive,
     gesture,
+    isModelReady,
+    error,
     enableGesture,
     disableGesture,
     videoRef,

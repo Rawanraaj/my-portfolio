@@ -9,6 +9,8 @@ export default function GestureOverlay({ gestureState }) {
   const {
     isActive,
     gesture,
+    isModelReady,
+    error,
     enableGesture,
     disableGesture,
     videoRef,
@@ -17,7 +19,6 @@ export default function GestureOverlay({ gestureState }) {
 
   const [isMobile, setIsMobile] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
-  const [isFading, setIsFading] = useState(false);
 
   // Monitor screen size and touch support for mobile layouts
   useEffect(() => {
@@ -46,14 +47,10 @@ export default function GestureOverlay({ gestureState }) {
   };
 
   const handleCloseTutorial = () => {
-    setIsFading(true);
-    // Modal fades out for 800ms before camera permission popup triggers
-    setTimeout(() => {
-      setShowTutorial(false);
-      setIsFading(false);
-      sessionStorage.setItem('gesture_tutorial_seen', 'true');
-      enableGesture();
-    }, 800);
+    setShowTutorial(false);
+    sessionStorage.setItem('gesture_tutorial_seen', 'true');
+    // Call enableGesture immediately within the click event context to preserve transient user activation!
+    enableGesture();
   };
 
   const getGestureDisplay = (g) => {
@@ -71,7 +68,9 @@ export default function GestureOverlay({ gestureState }) {
     }
   };
 
-  const display = getGestureDisplay(gesture);
+  const display = (isActive && !isModelReady && !error)
+    ? { text: '⏳ LOADING MODEL...', color: '#ffaa3c' }
+    : getGestureDisplay(gesture);
   const previewWidth = isMobile ? 80 : 140;
   const previewHeight = isMobile ? 60 : 100;
   const labelFontSize = isMobile ? '10px' : '11px';
@@ -88,7 +87,7 @@ export default function GestureOverlay({ gestureState }) {
         backgroundColor: 'rgba(6, 6, 15, 0.92)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
-        opacity: isFading ? 0 : 1,
+        opacity: 1,
         transition: 'opacity 0.4s ease-in-out',
         padding: '20px',
         pointerEvents: 'auto',
@@ -236,6 +235,24 @@ export default function GestureOverlay({ gestureState }) {
                 }}
               />
             </div>
+          </div>
+        )}
+        {error && (
+          <div
+            style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '10px',
+              color: '#ff6b6b',
+              backgroundColor: 'rgba(6, 6, 15, 0.9)',
+              border: '1px solid rgba(255, 107, 107, 0.3)',
+              padding: '4px 10px',
+              borderRadius: '8px',
+              maxWidth: '220px',
+              textAlign: 'center',
+              lineHeight: '1.4'
+            }}
+          >
+            ⚠️ {error}
           </div>
         )}
         <button

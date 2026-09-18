@@ -47,6 +47,29 @@ export default function Navbar({ activeSection }) {
     }
   }
 
+  // Close mobile dropdown on outside click or Escape key
+  useEffect(() => {
+    if (!mobileOpen) return
+    const handlePointerDown = (e) => {
+      if (
+        navRef.current &&
+        !navRef.current.contains(e.target) &&
+        !e.target.closest('.mobile-menu')
+      ) {
+        setMobileOpen(false)
+      }
+    }
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setMobileOpen(false)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [mobileOpen])
+
   return (
     <>
       <nav
