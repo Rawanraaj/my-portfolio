@@ -175,22 +175,31 @@ export default function Hero() {
             Available for Projects
           </div>
 
-          <span className="hero-greeting reveal delay-1">HELLO, I'M AALOK NIROULA</span>
+          <span className="hero-greeting reveal delay-1">HELLO, I'M</span>
           
-          {/* Main Headline */}
+          {/* Brutalist Heading typography */}
           <div className="select-none my-3 reveal delay-2">
             <h1 
-              className="font-black tracking-tight text-[#f0ece4] leading-tight"
+              className="font-black tracking-tight text-[#f0ece4] leading-none"
               style={{
-                fontSize: 'clamp(32px, 4.2vw, 54px)',
-                lineHeight: 1.15,
-                letterSpacing: '-0.02em',
-                display: 'block',
-                maxWidth: '540px'
+                fontSize: 'clamp(50px, 6.5vw, 100px)',
+                transform: 'rotate(-2deg)',
+                transformOrigin: 'left center',
+                display: 'block'
               }}
             >
-              I build professional websites that get local businesses real customers.
+              AALOK
             </h1>
+            <span 
+              className="text-outline font-black tracking-tight leading-none block"
+              style={{
+                fontSize: 'clamp(50px, 6.5vw, 100px)',
+                marginTop: '-0.15em',
+                display: 'block'
+              }}
+            >
+              NIROULA
+            </span>
           </div>
 
           <div className="hero-role reveal delay-3">
@@ -201,7 +210,7 @@ export default function Hero() {
           </div>
 
           <p className="hero-desc reveal delay-4">
-            Production-grade web apps — for restaurants, media companies, and small businesses — with the backend, admin tools, and reliability real businesses actually need.
+            Frontend developer and creative designer from Kathmandu. BCS student at IIMS College. Building immersive 3D interfaces and clean user experiences.
           </p>
 
           <div className="hero-actions reveal delay-5">
