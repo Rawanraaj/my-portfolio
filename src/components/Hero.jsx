@@ -202,6 +202,23 @@ export default function Hero() {
             </span>
           </div>
 
+          {/* Strong Tagline */}
+          <h2
+            className="hero-tagline reveal delay-2"
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 800,
+              fontSize: 'clamp(20px, 2.5vw, 32px)',
+              lineHeight: 1.25,
+              color: '#f0ece4',
+              letterSpacing: '-0.02em',
+              margin: '14px 0 12px 0',
+              maxWidth: '520px'
+            }}
+          >
+            I build professional websites that get local businesses real customers.
+          </h2>
+
           <div className="hero-role reveal delay-3">
             <span className="bracket">&lt;</span>
             <span className="typed">{typedRole}</span>
