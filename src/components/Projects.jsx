@@ -2,11 +2,11 @@ import { useRef, useState } from 'react'
 
 const projects = [
   {
-    title: 'KFX Studios Website',
+    title: 'KFX Movies',
     category: 'Web Development',
     description:
-      'Building a modern website for KFX Studios with responsive layouts, clean UI sections, and professional design.',
-    technologies: ['HTML', 'CSS', 'JavaScript'],
+      'A complete production website built for KFX Movies — frontend, backend, admin panel, authentication, and content management, live and running for a real media business today.',
+    technologies: ['Frontend', 'Backend', 'Admin Panel', 'Authentication', 'CMS'],
     status: 'live',
     link: 'https://kfxmovies.com/',
     image: "/kfxstudio.png",
@@ -55,7 +55,7 @@ function ProjectCard({ project, index, onDevClick, onKfxClick }) {
   const tiltHandlers = useTilt(cardRef)
 
   const isDev = project.status === 'ongoing' || project.link === '#'
-  const isKfx = project.title === 'KFX Studios Website'
+  const isKfx = project.title.includes('KFX')
 
   return (
     <div
