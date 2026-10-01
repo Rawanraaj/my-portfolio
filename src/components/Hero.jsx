@@ -1,4 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Hero3DBackground from './Hero3DBackground'
+
+const SWATCHES = [
+  { id: 'violet', name: 'Neon Violet', hex: '#8b5cf6' },
+  { id: 'cyan', name: 'Electric Cyan', hex: '#06b6d4' },
+  { id: 'rose', name: 'Cyber Rose', hex: '#ec4899' },
+  { id: 'emerald', name: 'Emerald', hex: '#10b981' },
+]
 
 const navCards = [
   {
@@ -84,6 +92,7 @@ export default function Hero() {
   const roles = ['Frontend Developer', 'Graphic Designer', 'Video Editor', 'Web Maintainer']
   const typedRole = useTypewriter(roles)
 
+  const [activeColor, setActiveColor] = useState('#8b5cf6')
   const [rotY, setRotY] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [isAutoSpinning, setIsAutoSpinning] = useState(true)
@@ -166,6 +175,9 @@ export default function Hero() {
 
   return (
     <section className="hero" id="home">
+      {/* 3D WebGL Distorted Shape Background */}
+      <Hero3DBackground activeColor={activeColor} />
+
       <div className="hero-layout">
         
         {/* Left Info Column */}
@@ -253,6 +265,31 @@ export default function Hero() {
             <div className="hero-stat">
               <span className="hero-stat-value">3+</span>
               <span className="hero-stat-label">ROLES</span>
+            </div>
+          </div>
+
+          {/* 3D Core Shape Theme Swatches */}
+          <div className="hero-theme-control reveal delay-5">
+            <span className="hero-theme-label">
+              <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>palette</span>
+              3D CORE:
+            </span>
+            <div className="hero-theme-swatches" role="radiogroup" aria-label="3D Core Material Color">
+              {SWATCHES.map((swatch) => (
+                <button
+                  key={swatch.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={activeColor === swatch.hex}
+                  className={`hero-swatch-btn ${activeColor === swatch.hex ? 'active' : ''}`}
+                  style={{ '--swatch-color': swatch.hex }}
+                  onClick={() => setActiveColor(swatch.hex)}
+                  title={`Set 3D shape color to ${swatch.name}`}
+                  aria-label={`Set 3D shape color to ${swatch.name}`}
+                >
+                  <span className="hero-swatch-dot" style={{ backgroundColor: swatch.hex }} />
+                </button>
+              ))}
             </div>
           </div>
         </div>

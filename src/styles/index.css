@@ -502,6 +502,142 @@ input, textarea { cursor: none; }
   margin-top: 2px;
 }
 
+/* ═══════════════════════════════════════════════════════
+   HERO 3D WEBGL BACKGROUND & FALLBACK
+   ═══════════════════════════════════════════════════════ */
+.hero-3d-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  opacity: 0.55;
+  transition: opacity 0.5s ease;
+}
+
+.hero-3d-fallback {
+  position: absolute;
+  top: 50%;
+  right: 20%;
+  transform: translate(50%, -50%);
+  width: 440px;
+  height: 440px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    var(--fallback-color, #8b5cf6) 0%,
+    rgba(139, 92, 246, 0.25) 45%,
+    transparent 70%
+  );
+  filter: blur(60px);
+  opacity: 0.4;
+  animation: fallbackPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes fallbackPulse {
+  0% { transform: translate(50%, -50%) scale(0.92); opacity: 0.35; }
+  100% { transform: translate(50%, -50%) scale(1.08); opacity: 0.5; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   HERO 3D THEME COLOR PICKER
+   ═══════════════════════════════════════════════════════ */
+.hero-theme-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 6px 14px;
+  background: rgba(15, 15, 30, 0.7);
+  border: 1px solid var(--border-subtle);
+  border-radius: 50px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  width: fit-content;
+  position: relative;
+  z-index: 3;
+}
+
+.hero-theme-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.hero-theme-swatches {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-swatch-btn {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: transparent;
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s var(--ease-out), border-color 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+  outline: none;
+  touch-action: manipulation;
+}
+
+.hero-swatch-btn::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  bottom: -7px;
+  left: -7px;
+  right: -7px;
+}
+
+.hero-swatch-btn:hover {
+  transform: scale(1.2);
+}
+
+.hero-swatch-btn.active {
+  border-color: var(--swatch-color);
+  box-shadow: 0 0 10px var(--swatch-color);
+  transform: scale(1.15);
+}
+
+.hero-swatch-dot {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .hero-3d-fallback {
+    right: 50%;
+    transform: translate(50%, -50%);
+    width: 300px;
+    height: 300px;
+  }
+  .hero-theme-control {
+    margin-top: 18px;
+  }
+}
+
 /* Buttons */
 .btn-primary {
   display: inline-flex;
