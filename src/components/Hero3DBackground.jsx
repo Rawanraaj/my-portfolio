@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense, useState, useEffect } from 'react'
+﻿import React, { lazy, Suspense, useState, useEffect } from 'react'
 
 const Hero3DCanvas = lazy(() => import('./Hero3DCanvas'))
 
@@ -6,12 +6,27 @@ function isWebGLAvailable() {
   if (typeof window === 'undefined') return false
   try {
     const canvas = document.createElement('canvas')
-    return !!(
-      window.WebGLRenderingContext &&
-      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
-    )
+    const ctx = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+    return !!(window.WebGLRenderingContext && ctx)
   } catch {
     return false
+  }
+}
+
+class CanvasErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+  componentDidCatch() {}
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback
+    }
+    return this.props.children
   }
 }
 
@@ -29,34 +44,32 @@ function StaticFallback({ activeColor }) {
 
 export default function Hero3DBackground({ activeColor = '#8b5cf6' }) {
   const [shouldRender3D, setShouldRender3D] = useState(false)
+  const [reducedMotion, setReducedMotion] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
 
-    // 1. Check prefers-reduced-motion
-    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
-    if (reducedMotionQuery.matches) {
-      setShouldRender3D(false)
-      return
-    }
+    // Check reduced motion preference
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    setReducedMotion(motionQuery.matches)
 
-    // 2. Check WebGL availability
-    if (!isWebGLAvailable()) {
-      setShouldRender3D(false)
-      return
-    }
+    const handleMotionChange = (e) => setReducedMotion(e.matches)
+    motionQuery.addEventListener('change', handleMotionChange)
 
-    // 3. Check for low-power devices (very low core count or constrained memory)
+    // Only skip 3D WebGL if WebGL is unavailable or device is strictly low-power (<= 2 cores)
+    const webglOk = isWebGLAvailable()
     const cores = navigator.hardwareConcurrency || 4
-    const isVeryLowEnd = cores <= 2 || (navigator.deviceMemory && navigator.deviceMemory < 2)
+    const memory = navigator.deviceMemory
+    const isVeryLowEnd = cores <= 2 || (memory && memory < 2)
 
-    if (isVeryLowEnd) {
+    if (webglOk && !isVeryLowEnd) {
+      setShouldRender3D(true)
+    } else {
       setShouldRender3D(false)
-      return
     }
 
-    setShouldRender3D(true)
+    return () => motionQuery.removeEventListener('change', handleMotionChange)
   }, [])
 
   if (!isMounted) {
@@ -70,9 +83,11 @@ export default function Hero3DBackground({ activeColor = '#8b5cf6' }) {
   return (
     <div className="hero-3d-container" aria-hidden="true">
       {shouldRender3D ? (
-        <Suspense fallback={<StaticFallback activeColor={activeColor} />}>
-          <Hero3DCanvas activeColor={activeColor} />
-        </Suspense>
+        <CanvasErrorBoundary fallback={<StaticFallback activeColor={activeColor} />}>
+          <Suspense fallback={<StaticFallback activeColor={activeColor} />}>
+            <Hero3DCanvas activeColor={activeColor} reducedMotion={reducedMotion} />
+          </Suspense>
+        </CanvasErrorBoundary>
       ) : (
         <StaticFallback activeColor={activeColor} />
       )}
