@@ -1,11 +1,12 @@
-﻿import { useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { MeshDistortMaterial, Float } from '@react-three/drei'
 import * as THREE from 'three'
 
 function FloatingShape({
   geometry,
-  position,
+  basePosition,
+  wanderConfig,
   rotationSpeeds = [0.2, 0.1],
   floatConfig = { speed: 1.5, rotationIntensity: 0.3, floatIntensity: 0.4 },
   distortConfig = { distort: 0.3, speed: 1.5 },
@@ -15,6 +16,7 @@ function FloatingShape({
 }) {
   const meshRef = useRef()
   const materialRef = useRef()
+  const positionRef = useRef(new THREE.Vector3(...basePosition))
 
   // Harmonious subtle hue/lightness variation around the active swatch color
   const targetColor = useMemo(() => {
@@ -39,8 +41,19 @@ function FloatingShape({
     // Skip continuous motion when reduced motion is preferred
     if (reducedMotion) return
 
+    // Per-shape auto-rotation
     meshRef.current.rotation.x += delta * rotationSpeeds[0]
     meshRef.current.rotation.y += delta * rotationSpeeds[1]
+
+    // Slow wandering drift (Lissajous curves)
+    const t = state.clock.elapsedTime
+    const wx = basePosition[0] + Math.sin(t * wanderConfig.freqX + wanderConfig.phaseX) * wanderConfig.ampX
+    const wy = basePosition[1] + Math.cos(t * wanderConfig.freqY + wanderConfig.phaseY) * wanderConfig.ampY
+    const wz = basePosition[2] + Math.sin(t * wanderConfig.freqZ + wanderConfig.phaseZ) * wanderConfig.ampZ * 0.5
+
+    // Smooth lerp toward wander target
+    positionRef.current.lerp(new THREE.Vector3(wx, wy, wz), 0.02)
+    meshRef.current.position.copy(positionRef.current)
   })
 
   return (
@@ -49,7 +62,7 @@ function FloatingShape({
       rotationIntensity={reducedMotion ? 0 : floatConfig.rotationIntensity}
       floatIntensity={reducedMotion ? 0 : floatConfig.floatIntensity}
     >
-      <mesh ref={meshRef} position={position}>
+      <mesh ref={meshRef} position={basePosition}>
         {geometry}
         <MeshDistortMaterial
           ref={materialRef}
@@ -107,68 +120,67 @@ function FloatingShapesCluster({ color, reducedMotion = false }) {
     pointerPos.current.x = THREE.MathUtils.lerp(pointerPos.current.x, pointerPos.current.targetX, 0.05)
     pointerPos.current.y = THREE.MathUtils.lerp(pointerPos.current.y, pointerPos.current.targetY, 0.05)
 
-    groupRef.current.rotation.y = pointerPos.current.x * 0.28
-    groupRef.current.rotation.x = -pointerPos.current.y * 0.22
+    groupRef.current.rotation.y = pointerPos.current.x * 0.2
+    groupRef.current.rotation.x = -pointerPos.current.y * 0.15
 
-    // 2. Scroll reaction: rotation and responsive scaling
-    const scrollFactor = Math.min(scrollRef.current / (window.innerHeight || 800), 2)
-    groupRef.current.rotation.z = scrollFactor * Math.PI * 0.35
-
-    const baseScale = viewport.width < 5 ? 0.78 : 1
-    const targetScale = Math.max(0.65, (1 - scrollFactor * 0.12) * baseScale)
-    groupRef.current.scale.set(targetScale, targetScale, targetScale)
+    // 2. Scroll reaction: gentle rotation based on total scroll through entire page
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight || 1
+    const scrollFactor = Math.min(scrollRef.current / docHeight, 1)
+    groupRef.current.rotation.z = scrollFactor * Math.PI * 0.25
   })
 
-  // 5 smaller floating shapes of mixed geometry:
-  // 1. Icosahedron (center-top behind heading)
-  // 2. Torus Knot (lower-left behind role/tagline)
-  // 3. Octahedron (upper-right of text, contained in left column)
-  // 4. Sphere (upper-left near greeting/badge)
-  // 5. Dodecahedron (lower-right behind stats/actions)
+  // 5 shapes scattered across the full viewport with wandering drift configs.
+  // Camera at z=8, fov=45 gives ~7 units wide, ~4 units tall visible area.
+  // Wander amplitudes let shapes drift 1.5-2.2 units from base over ~40-70s cycles.
   const shapesData = useMemo(() => [
     {
       id: 'icosahedron',
-      geometry: <icosahedronGeometry args={[0.55, 16]} />,
-      position: [-0.2, 0.45, 0.2],
+      geometry: <icosahedronGeometry args={[0.5, 6]} />,
+      basePosition: [-1.8, 1.2, 0.3],
+      wanderConfig: { freqX: 0.08, freqY: 0.06, freqZ: 0.04, ampX: 1.8, ampY: 1.2, ampZ: 0.6, phaseX: 0, phaseY: 1.5, phaseZ: 0.8 },
       rotationSpeeds: [0.24, 0.16],
       floatConfig: { speed: 1.5, rotationIntensity: 0.32, floatIntensity: 0.4 },
-      distortConfig: { distort: 0.3, speed: 1.6 },
+      distortConfig: { distort: 0.22, speed: 1.2 },
       colorOffset: 0,
     },
     {
       id: 'torusknot',
-      geometry: <torusKnotGeometry args={[0.38, 0.12, 64, 16]} />,
-      position: [-1.25, -0.65, -0.3],
+      geometry: <torusKnotGeometry args={[0.34, 0.1, 48, 12]} />,
+      basePosition: [2.2, -1.0, -0.4],
+      wanderConfig: { freqX: 0.07, freqY: 0.09, freqZ: 0.05, ampX: 2.0, ampY: 1.4, ampZ: 0.5, phaseX: 2.1, phaseY: 0.4, phaseZ: 3.2 },
       rotationSpeeds: [-0.2, 0.22],
       floatConfig: { speed: 1.2, rotationIntensity: 0.45, floatIntensity: 0.5 },
-      distortConfig: { distort: 0.25, speed: 1.4 },
+      distortConfig: { distort: 0.18, speed: 1.1 },
       colorOffset: 0.035,
     },
     {
       id: 'octahedron',
-      geometry: <octahedronGeometry args={[0.48, 0]} />,
-      position: [1.15, 0.65, -0.35],
+      geometry: <octahedronGeometry args={[0.42, 0]} />,
+      basePosition: [1.5, 1.5, -0.6],
+      wanderConfig: { freqX: 0.1, freqY: 0.07, freqZ: 0.06, ampX: 1.5, ampY: 1.6, ampZ: 0.7, phaseX: 4.0, phaseY: 2.8, phaseZ: 1.0 },
       rotationSpeeds: [0.28, -0.18],
       floatConfig: { speed: 1.8, rotationIntensity: 0.48, floatIntensity: 0.35 },
-      distortConfig: { distort: 0.32, speed: 1.8 },
+      distortConfig: { distort: 0.24, speed: 1.3 },
       colorOffset: -0.035,
     },
     {
       id: 'sphere',
-      geometry: <sphereGeometry args={[0.42, 24, 24]} />,
-      position: [-1.15, 0.85, 0.1],
+      geometry: <sphereGeometry args={[0.38, 16, 16]} />,
+      basePosition: [-2.0, -1.3, 0.1],
+      wanderConfig: { freqX: 0.06, freqY: 0.1, freqZ: 0.08, ampX: 1.6, ampY: 1.0, ampZ: 0.4, phaseX: 1.2, phaseY: 3.5, phaseZ: 5.0 },
       rotationSpeeds: [0.18, 0.26],
       floatConfig: { speed: 2.1, rotationIntensity: 0.25, floatIntensity: 0.55 },
-      distortConfig: { distort: 0.35, speed: 2.0 },
+      distortConfig: { distort: 0.25, speed: 1.4 },
       colorOffset: 0.02,
     },
     {
       id: 'dodecahedron',
-      geometry: <dodecahedronGeometry args={[0.45, 0]} />,
-      position: [0.75, -0.85, 0.15],
+      geometry: <dodecahedronGeometry args={[0.4, 0]} />,
+      basePosition: [0.2, -0.3, 0.2],
+      wanderConfig: { freqX: 0.09, freqY: 0.05, freqZ: 0.07, ampX: 2.2, ampY: 1.8, ampZ: 0.5, phaseX: 5.5, phaseY: 0.7, phaseZ: 2.4 },
       rotationSpeeds: [-0.22, -0.16],
       floatConfig: { speed: 1.3, rotationIntensity: 0.4, floatIntensity: 0.45 },
-      distortConfig: { distort: 0.28, speed: 1.5 },
+      distortConfig: { distort: 0.2, speed: 1.2 },
       colorOffset: -0.02,
     },
   ], [])
@@ -179,7 +191,8 @@ function FloatingShapesCluster({ color, reducedMotion = false }) {
         <FloatingShape
           key={item.id}
           geometry={item.geometry}
-          position={item.position}
+          basePosition={item.basePosition}
+          wanderConfig={item.wanderConfig}
           rotationSpeeds={item.rotationSpeeds}
           floatConfig={item.floatConfig}
           distortConfig={item.distortConfig}
@@ -195,8 +208,8 @@ function FloatingShapesCluster({ color, reducedMotion = false }) {
 export default function Hero3DCanvas({ activeColor = '#8b5cf6', reducedMotion = false }) {
   return (
     <Canvas
-      camera={{ position: [0, 0, 4.8], fov: 45 }}
-      dpr={[1, 1.5]}
+      camera={{ position: [0, 0, 8], fov: 45 }}
+      dpr={[1, 1.25]}
       gl={{
         alpha: true,
         antialias: true,
@@ -214,7 +227,7 @@ export default function Hero3DCanvas({ activeColor = '#8b5cf6', reducedMotion = 
       <ambientLight intensity={0.7} />
       <directionalLight position={[10, 10, 5]} intensity={1.5} />
       <directionalLight position={[-10, -5, -5]} intensity={0.5} />
-      <pointLight position={[0, -1, 2]} intensity={1.2} color={activeColor} />
+      <pointLight position={[0, -1, 3]} intensity={1.0} color={activeColor} />
       <FloatingShapesCluster color={activeColor} reducedMotion={reducedMotion} />
     </Canvas>
   )

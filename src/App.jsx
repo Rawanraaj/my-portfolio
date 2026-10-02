@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 
 // Import background & overlays
 import NepalBackground from './components/NepalBackground'
+import Hero3DBackground from './components/Hero3DBackground'
 import GestureOverlay from './components/GestureOverlay'
 
 // Import restored components
@@ -146,6 +147,7 @@ function useScrollProgress() {
    MAIN APP
    ═══════════════════════════════════════════════════════ */
 export default function App() {
+  const [active3DColor, setActive3DColor] = useState('#8b5cf6')
   const activeSection = useActiveSection()
   useScrollReveal()
   const scrollProgress = useScrollProgress()
@@ -179,13 +181,16 @@ export default function App() {
       {/* Layer 1: Nepal Video Background & twinkling star canvas overlay */}
       <NepalBackground />
 
+      {/* Layer 2: 3D Full-Page Floating Shapes Background */}
+      <Hero3DBackground activeColor={active3DColor} />
+
       {/* Scroll Progress bar */}
       <div className="scroll-progress" style={{ width: `${scrollProgress}%` }} />
 
       <Navbar activeSection={activeSection} />
 
       {/* Hero is OUTSIDE any transform wrapper so preserve-3d carousel works */}
-      <Hero />
+      <Hero activeColor={active3DColor} setActiveColor={setActive3DColor} />
 
       <main>
         <About />

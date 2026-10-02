@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import Hero3DBackground from './Hero3DBackground'
 
 const SWATCHES = [
   { id: 'violet', name: 'Neon Violet', hex: '#8b5cf6' },
@@ -88,11 +87,10 @@ function useTypewriter(words, typingSpeed = 80, deletingSpeed = 40, pauseTime = 
   return text
 }
 
-export default function Hero() {
+export default function Hero({ activeColor = '#8b5cf6', setActiveColor }) {
   const roles = ['Frontend Developer', 'Graphic Designer', 'Video Editor', 'Web Maintainer']
   const typedRole = useTypewriter(roles)
 
-  const [activeColor, setActiveColor] = useState('#8b5cf6')
   const [rotY, setRotY] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [isAutoSpinning, setIsAutoSpinning] = useState(true)
@@ -179,9 +177,6 @@ export default function Hero() {
         
         {/* Left Info Column */}
         <div className="hero-content">
-          {/* 3D WebGL Distorted Shape Accent — Contained behind name typography */}
-          <Hero3DBackground activeColor={activeColor} />
-
           <div className="hero-badge reveal">
             <span className="hero-badge-dot" />
             Available for Projects
