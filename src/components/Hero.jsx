@@ -175,13 +175,13 @@ export default function Hero() {
 
   return (
     <section className="hero" id="home">
-      {/* 3D WebGL Distorted Shape Background */}
-      <Hero3DBackground activeColor={activeColor} />
-
       <div className="hero-layout">
         
         {/* Left Info Column */}
         <div className="hero-content">
+          {/* 3D WebGL Distorted Shape Accent — Contained behind name typography */}
+          <Hero3DBackground activeColor={activeColor} />
+
           <div className="hero-badge reveal">
             <span className="hero-badge-dot" />
             Available for Projects

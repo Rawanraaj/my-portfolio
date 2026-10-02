@@ -1,4 +1,4 @@
-﻿import { useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { MeshDistortMaterial, Float } from '@react-three/drei'
 import * as THREE from 'three'
@@ -61,33 +61,30 @@ function ProceduralShape({ color, reducedMotion = false }) {
     const scrollFactor = Math.min(scrollRef.current / (window.innerHeight || 800), 2)
     meshRef.current.rotation.z = scrollFactor * Math.PI * 0.6
 
-    const baseScale = viewport.width < 6 ? 0.75 : 1
-    const targetScale = Math.max(0.6, (1 - scrollFactor * 0.15) * baseScale)
+    const baseScale = viewport.width < 5 ? 0.8 : 1
+    const targetScale = Math.max(0.65, (1 - scrollFactor * 0.12) * baseScale)
     meshRef.current.scale.set(targetScale, targetScale, targetScale)
   })
 
-  // Position: On wide screens, position slightly to the right behind carousel / center
-  const posX = viewport.width > 7 ? 0.7 : 0
-
   return (
-    <group ref={groupRef} position={[posX, 0, 0]}>
+    <group ref={groupRef} position={[0, 0, 0]}>
       <Float
-        speed={reducedMotion ? 0 : 2}
-        rotationIntensity={reducedMotion ? 0 : 0.6}
-        floatIntensity={reducedMotion ? 0 : 0.8}
+        speed={reducedMotion ? 0 : 1.4}
+        rotationIntensity={reducedMotion ? 0 : 0.35}
+        floatIntensity={reducedMotion ? 0 : 0.45}
       >
         <mesh ref={meshRef}>
-          {/* Distorted Icosahedron geometry */}
-          <icosahedronGeometry args={[1.85, 32]} />
+          {/* Subtle accent distorted icosahedron */}
+          <icosahedronGeometry args={[1.15, 32]} />
           <MeshDistortMaterial
             ref={materialRef}
             color={color}
-            roughness={0.15}
-            metalness={0.75}
+            roughness={0.18}
+            metalness={0.7}
             clearcoat={0.9}
             clearcoatRoughness={0.1}
-            distort={reducedMotion ? 0.35 : 0.42}
-            speed={reducedMotion ? 0 : 1.8}
+            distort={reducedMotion ? 0.22 : 0.32}
+            speed={reducedMotion ? 0 : 1.5}
             wireframe={false}
           />
         </mesh>
@@ -99,7 +96,7 @@ function ProceduralShape({ color, reducedMotion = false }) {
 export default function Hero3DCanvas({ activeColor = '#8b5cf6', reducedMotion = false }) {
   return (
     <Canvas
-      camera={{ position: [0, 0, 5.2], fov: 45 }}
+      camera={{ position: [0, 0, 4.2], fov: 45 }}
       dpr={[1, 1.5]}
       gl={{
         alpha: true,
