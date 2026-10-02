@@ -509,8 +509,8 @@ input, textarea { cursor: none; }
   position: absolute;
   top: -40px;
   left: -40px;
-  width: 440px;
-  height: 440px;
+  width: 480px;
+  height: 480px;
   max-width: 90vw;
   max-height: 90vw;
   pointer-events: none;
