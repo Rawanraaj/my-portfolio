@@ -15,6 +15,7 @@ import LiveDemo from './components/LiveDemo'
 import Experience from './components/Experience'
 import Contact from './components/Contact'
 import Footer from './components/Footer'
+import { Analytics } from '@vercel/analytics/react'
 
 
 /* ═══════════════════════════════════════════════════════
@@ -205,6 +206,8 @@ export default function App() {
 
       {/* Hand Gesture controller overlays */}
       <GestureOverlay />
+
+      <Analytics />
     </div>
   )
 }
